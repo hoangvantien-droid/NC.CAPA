@@ -26,4 +26,14 @@ public class IngestController {
     public ApiResponse<AggregationResult> ticket(@Valid @RequestBody com.dqh.nccapa.aggregation.dto.TicketEventRequest req) {
         return ApiResponse.ok(aggregation.onTicket(req));
     }
+
+    @PostMapping("/env")
+    public ApiResponse<AggregationResult> env(@Valid @RequestBody com.dqh.nccapa.aggregation.dto.EnvEventRequest req) {
+        return ApiResponse.ok(aggregation.onEnv(req));
+    }
+
+    @PostMapping("/receiving")
+    public ApiResponse<AggregationResult> receiving(@Valid @RequestBody com.dqh.nccapa.aggregation.dto.ReceivingEventRequest req) {
+        return ApiResponse.ok(aggregation.onReceiving(req));
+    }
 }

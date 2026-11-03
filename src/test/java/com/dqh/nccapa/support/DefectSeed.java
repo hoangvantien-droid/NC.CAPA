@@ -9,7 +9,8 @@ public final class DefectSeed {
     public static void seed(JdbcTemplate jdbc) {
         jdbc.update("INSERT IGNORE INTO nha_may(ma, ten) VALUES ('MGP','Nha may MGP')");
         jdbc.update("INSERT IGNORE INTO nhom_loi(nhom_loi_id, ten_nhom, theo_nguon) VALUES " +
-                "('FG','Thanh pham','FG'),('PRC','Trong SX','PRC'),('REC','Nhan hang','REC'),('CMP','Khieu nai','CMP')");
+                "('FG','Thanh pham','FG'),('PRC','Trong SX','PRC'),('REC','Nhan hang','REC')," +
+                "('CMP','Khieu nai','CMP'),('ENV','Moi truong','ENV')");
         // ma_loi_id, nhom, ten, muc_default, moi_nguy, KV, nhom_N, nguoi_so_huu, hieu_luc_tu
         insert(jdbc, "FG-01", "FG", "Cam quan khong dat", "NHE", "CAM_QUAN", 0, "SX_TP_NVL");
         insert(jdbc, "PRC-02", "PRC", "MES chan cong doan", "NANG", "KHONG", 0, "SX_TP_NVL");
@@ -17,6 +18,9 @@ public final class DefectSeed {
         insert(jdbc, "REC-06", "REC", "Giay CN NCC het han", "NHE", "KHONG", 0, "HETHONG_TBDO_NCC_MT");
         insert(jdbc, "CMP-01", "CMP", "Khieu nai an toan TP", "NGHIEM_TRONG", "VI_SINH", 1, "SX_TP_NVL");
         insert(jdbc, "CMP-02", "CMP", "Khieu nai chat luong", "NANG", "CAM_QUAN", 0, "SX_TP_NVL");
+        insert(jdbc, "ENV-01", "ENV", "Bootswab duong mam benh vung 1", "NGHIEM_TRONG", "VI_SINH", 1, "HETHONG_TBDO_NCC_MT");
+        insert(jdbc, "REC-02", "REC", "NVL nhiem tap chat la", "NANG", "VAT_LY", 0, "SX_TP_NVL");
+        insert(jdbc, "REC-03", "REC", "NVL vuot nguong vi sinh", "NGHIEM_TRONG", "VI_SINH", 1, "SX_TP_NVL");
     }
 
     private static void insert(JdbcTemplate jdbc, String ma, String nhom, String ten,
