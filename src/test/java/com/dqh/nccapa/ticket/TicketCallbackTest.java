@@ -32,6 +32,7 @@ class TicketCallbackTest extends MySqlTestBase {
     @TestConfiguration
     static class StubConfig {
         @Bean
+        @org.springframework.context.annotation.Primary
         TicketSender ticketSender() { return new StubTicketSender(); }
     }
 

@@ -1,17 +1,18 @@
 package com.dqh.nccapa.ticket.service;
 
-import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.MediaType;
 import org.springframework.web.client.RestClient;
 
-/** Impl HTTP mặc định (nhường chỗ cho stub trong test qua @ConditionalOnMissingBean). */
+/**
+ * Cấu hình TicketSender HTTP mặc định. Tên class KHÁC tên bean method (tránh trùng định nghĩa bean).
+ * Test cấp thêm StubTicketSender @Primary để override khi inject.
+ */
 @Configuration
-public class HttpTicketSender {
+public class TicketSenderConfig {
 
     @Bean
-    @ConditionalOnMissingBean(TicketSender.class)
     public TicketSender httpTicketSender() {
         RestClient client = RestClient.create();
         return (url, payloadJson) -> {
