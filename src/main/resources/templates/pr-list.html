@@ -17,6 +17,8 @@
       <a th:href="@{/pr}" class="on">PR</a>
       <a th:href="@{/ticket}">Ticket</a>
     </nav>
+    <span class="spacer"></span>
+    <div th:replace="~{fragments/user-switcher :: userSwitcher}"></div>
   </header>
 
   <main class="wrap">

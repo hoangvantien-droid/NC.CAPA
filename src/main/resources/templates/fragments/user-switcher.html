@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<body>
+  <!--
+    Fragment chuyển tài khoản giả lập (demo, KHÔNG login thật).
+    Cần model attribute: currentUser (DemoUser), demoUsers (List<DemoUser>) — do DemoUserModelAdvice bơm vào.
+  -->
+  <form th:fragment="userSwitcher" method="post" th:action="@{/demo/switch-user}"
+        style="display:flex;gap:8px;align-items:center;font-size:13px">
+    <span class="muted">Tài khoản demo:</span>
+    <select name="username" onchange="this.form.submit()"
+            style="padding:4px 8px;border:1px solid var(--line,#ccc);border-radius:6px;background:#fff">
+      <option th:each="u : ${demoUsers}"
+              th:value="${u.username()}"
+              th:selected="${currentUser != null and u.username() == currentUser.username()}"
+              th:text="${u.tenHienThi()} + ' · ' + ${u.vaiTro().tenHienThi}">tài khoản</option>
+    </select>
+    <noscript><button class="btn" type="submit">Đổi</button></noscript>
+  </form>
+</body>
+</html>

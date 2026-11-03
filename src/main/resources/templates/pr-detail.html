@@ -15,6 +15,8 @@
       <a th:href="@{/}">Danh sách</a><a th:href="@{/dashboard}">Dashboard</a>
       <a th:href="@{/pr}">PR</a><a th:href="@{/ticket}">Ticket</a>
     </nav>
+    <span class="spacer"></span>
+    <div th:replace="~{fragments/user-switcher :: userSwitcher}"></div>
   </header>
 
   <p class="crumb"><a th:href="@{/pr}">PR</a> / PR#<span th:text="${pr.id}">0</span></p>

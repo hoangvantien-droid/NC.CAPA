@@ -12,7 +12,8 @@
   <header class="topbar">
     <span class="brand">QLone<span class="sep">·</span>NC/CAPA</span>
     <span class="spacer"></span>
-    <a class="btn" th:href="@{/}">Danh sách</a>
+    <div th:replace="~{fragments/user-switcher :: userSwitcher}"></div>
+    <a class="btn" th:href="@{/}" style="margin-left:12px">Danh sách</a>
   </header>
 
   <p class="crumb"><a th:href="@{/}">Danh sách</a> / <span class="id" th:text="${nc.soHieu}">KPH</span></p>
@@ -91,7 +92,8 @@
       <section class="panel">
         <h2>Bước kế tiếp</h2>
         <div class="body">
-          <div class="actions" th:if="${!hanhDong.isEmpty()}">
+          <div class="actions" th:if="${!hanhDong.isEmpty()}"
+               th:attr="data-actor=${currentUser != null ? currentUser.username() : 'qademo'}">
             <button class="btn" th:each="h : ${hanhDong}"
                     th:classappend="${h.ma == 'reject' || h.ma == 'cancel'} ? 'danger' : ''"
                     th:data-action="${h.ma}" th:data-so="${nc.soHieu}"
@@ -147,12 +149,15 @@
   </div>
 
   <script th:inline="none">
-    // Gọi API nghiệp vụ. Các field (actor/lý do/chi phí) nhập nhanh qua prompt cho demo.
+    // Gọi API nghiệp vụ. actor LẤY TỪ tài khoản demo hiện tại (session) để demo SoD;
+    // vẫn cho sửa qua prompt nếu cần. Các field khác (lý do/chi phí) nhập nhanh qua prompt.
+    var actionsBox = document.querySelector('.actions');
+    var currentActor = (actionsBox && actionsBox.getAttribute('data-actor')) || 'qademo';
     document.querySelectorAll('button[data-action]').forEach(function(btn){
       btn.addEventListener('click', function(){
         var action = btn.getAttribute('data-action');
         var so = btn.getAttribute('data-so');
-        var actor = prompt('Người thực hiện (username):', 'qademo');
+        var actor = prompt('Người thực hiện (username):', currentActor);
         if(!actor) return;
         var body = { actor: actor };
         if(action==='escalate'){ body.mucMoi = prompt('Mức mới (NANG/NGHIEM_TRONG):','NANG'); body.lyDo = prompt('Lý do:',''); }

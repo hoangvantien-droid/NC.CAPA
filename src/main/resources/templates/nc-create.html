@@ -12,7 +12,8 @@
   <header class="topbar">
     <span class="brand">QLone<span class="sep">·</span>NC/CAPA</span>
     <span class="spacer"></span>
-    <a class="btn" th:href="@{/}">Danh sách</a>
+    <div th:replace="~{fragments/user-switcher :: userSwitcher}"></div>
+    <a class="btn" th:href="@{/}" style="margin-left:12px">Danh sách</a>
   </header>
 
   <p class="crumb"><a th:href="@{/}">Danh sách</a> / Tạo phiếu</p>

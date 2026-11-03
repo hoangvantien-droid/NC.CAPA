@@ -16,7 +16,8 @@
       <a th:href="@{/pr}">PR</a><a th:href="@{/ticket}" class="on">Ticket</a>
     </nav>
     <span class="spacer"></span>
-    <button class="btn btn-primary" id="flush">Gửi ngay các callback chờ</button>
+    <div th:replace="~{fragments/user-switcher :: userSwitcher}"></div>
+    <button class="btn btn-primary" id="flush" style="margin-left:12px">Gửi ngay các callback chờ</button>
   </header>
 
   <main class="wrap">
