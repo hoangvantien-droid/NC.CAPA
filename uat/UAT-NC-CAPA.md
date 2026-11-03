@@ -157,3 +157,81 @@ SELECT COUNT(*) FROM record_version               → 0
 - Mã lỗi dùng trong test: `FG-01` (Nhẹ), `PRC-02`/`CMP-02` (Nặng), `FG-03`/`FG-04`/`CMP-01` (Nghiêm trọng).
 - Tài khoản: `sxmgp` (SX), `khomgp` (Kho), `qamgp` (QA nhà máy), `qatd` (QA tập đoàn).
 - Test E2E chạy qua nginx public để `fetch('/api/v1/...')` được rewrite đúng; chạy trực tiếp cổng 3110 sẽ hỏng API do thiếu context path.
+
+---
+
+## 7. Chạy lại sau `d4f879f` (2026-11-03 23:43)
+
+Deploy `d4f879f` (fix D-01..D-04) lên production, Flyway apply `V14 seed roles backfill`, health UP.
+
+| Lớp | Case | Pass | Fail |
+|---|---:|---:|---:|
+| API | 53 | **53** | 0 |
+| E2E | 19 | 15 | 4 |
+
+### Trạng thái lỗi
+
+| Lỗi | Trạng thái | Ghi chú |
+|---|---|---|
+| D-01 seed role | **ĐÓNG** | V14 backfill, `app_user_role` đủ |
+| D-04 endpoint I7 | **ĐÓNG** | Endpoint có, trả 409 khi CAPA chưa xác nhận |
+| D-02 điều hướng 404 | **CÒN** | Nguyên nhân mới, xem 7.1 |
+| D-03 tràn ngang mobile | **CÒN** | Nguyên nhân khác dự đoán ban đầu, xem 7.2 |
+
+### 7.1 D-02 (còn) — `window.CTX` bị chèn `;jsessionid=`
+
+HTML thực tế trả về:
+
+```html
+window.CTX = "\/nc-capa\/;jsessionid=7DCF8D6B1F21397F9B21859ACA5CF289";
+```
+
+`@{/}` gọi `HttpServletResponse.encodeURL()` nên chèn `;jsessionid=` khi client chưa có cookie phiên.
+Hệ quả: `CTX + 'nc/' + soHieu` → `/nc-capa/;jsessionid=XXXnc/KPH-...` — URL hỏng, trình duyệt không điều hướng.
+Test UAT-UI-10/11 timeout 15s vì không có navigation.
+
+**Cách sửa (chọn 1):**
+
+1. Gốc — tắt URL rewriting, chỉ dùng cookie (`src/main/resources/application.yml`):
+   ```yaml
+   server:
+     servlet:
+       session:
+         tracking-modes: cookie
+   ```
+2. Hoặc cắt phần jsessionid ngay trong template:
+   ```js
+   window.CTX = (/*[[@{/}]]*/ '/').split(';')[0];
+   ```
+
+### 7.2 D-03 (còn) — tràn ngang do `.topbar`, không phải bảng chi tiết
+
+Đo trên Pixel 7 (412×915), trang `/nc-capa/nc/{so}`: `scrollWidth - clientWidth = 189–197px`.
+
+Phần tử vượt viewport (đo thật):
+
+| Phần tử | right (px) | width (px) |
+|---|---:|---:|
+| `form` (user-switcher trong header) | 509 | 315 |
+| `select[name=username]` | 509 | 268 |
+| `a.btn` (nút cuối topbar) | 601 | 64 |
+
+Rule responsive đã thêm chỉ xử lý phần thân; `.topbar` vẫn `display:flex` không wrap.
+
+**Cách sửa (`src/main/resources/static/css/app.css`):**
+
+```css
+@media (max-width: 720px) {
+  .topbar { flex-wrap: wrap; row-gap: 8px; }
+  .topbar .brand { flex: 1 1 100%; }
+  .topbar form { flex: 1 1 auto; min-width: 0; }
+  .topbar select { max-width: 100%; }
+  .topbar .btn { margin-left: 0 !important; }
+}
+```
+
+### 7.3 UI-14 — flaky, không phải lỗi nghiệp vụ
+
+Chạy cả suite: timeout 60s ở `button[data-action="submit-approval"]`.
+Chạy riêng: **PASS trong 2.6s**. Nguyên nhân: tải/round-trip qua public URL, không phải guard sai.
+Khuyến nghị: giữ nguyên test, chạy lại khi cần; hoặc tăng timeout của project desktop lên 90s.
