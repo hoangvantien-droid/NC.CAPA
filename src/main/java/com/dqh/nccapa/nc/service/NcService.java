@@ -47,13 +47,14 @@ public class NcService {
     private final AuditService audit;
     private final CapaClosureChecker capaClosureChecker;
     private final EarlyFailHook earlyFailHook;
+    private final TicketCallbackHook ticketCallbackHook;
     private final AppProperties appProps;
 
     public NcService(NcRepository ncRepo, NcChiTieuRepository chiTieuRepo,
                      NcDoiTuongRepository doiTuongRepo, DefectCatalogService defectCatalog,
                      SequenceGenerator sequence, AuditService audit,
                      CapaClosureChecker capaClosureChecker, EarlyFailHook earlyFailHook,
-                     AppProperties appProps) {
+                     TicketCallbackHook ticketCallbackHook, AppProperties appProps) {
         this.ncRepo = ncRepo;
         this.chiTieuRepo = chiTieuRepo;
         this.doiTuongRepo = doiTuongRepo;
@@ -62,7 +63,13 @@ public class NcService {
         this.audit = audit;
         this.capaClosureChecker = capaClosureChecker;
         this.earlyFailHook = earlyFailHook;
+        this.ticketCallbackHook = ticketCallbackHook;
         this.appProps = appProps;
+    }
+
+    /** NC có nguồn khiếu nại (có ticket gắn)? dùng để quyết định callback. */
+    private boolean laNguonKhieuNai(Nc nc) {
+        return nc.getNguonPhatSinh() == NcSource.TICKET;
     }
 
     @Transactional
@@ -219,6 +226,8 @@ public class NcService {
         ncRepo.save(nc);
         audit.logChuyenTrangThai("NC", soHieu,
                 NcStatus.Processing.name(), NcStatus.PendingVerification.name(), req.actor);
+        // Mốc phản hồi sớm cho NC nguồn khiếu nại (REQ mục 6)
+        if (laNguonKhieuNai(nc)) ticketCallbackHook.mocSom(nc);
         return nc;
     }
 
@@ -252,6 +261,27 @@ public class NcService {
         ncRepo.save(nc);
         audit.logChuyenTrangThai("NC", soHieu,
                 NcStatus.PendingVerification.name(), NcStatus.Closed.name(), req.actor);
+        // Mốc đóng hồ sơ (REQ mục 6)
+        if (laNguonKhieuNai(nc)) ticketCallbackHook.mocDong(nc, "Confirmed");
+        return nc;
+    }
+
+    /** N10: hủy phiếu (Cancelled). NC nguồn khiếu nại bị hủy vẫn callback case_closed = Cancelled. */
+    @Transactional
+    public Nc cancel(String soHieu, RejectRequest req) {
+        Nc nc = layNc(soHieu);
+        if (nc.getTrangThai() == NcStatus.Closed || nc.getTrangThai() == NcStatus.Cancelled) {
+            throw BusinessException.guard("NC đã ở trạng thái cuối");
+        }
+        if (req.lyDo == null || req.lyDo.isBlank()) {
+            throw BusinessException.businessRule("Hủy phiếu cần lý do", "lyDo");
+        }
+        NcStatus tu = nc.getTrangThai();
+        nc.setLyDoHuy(req.lyDo);
+        nc.setTrangThai(NcStatus.Cancelled);
+        ncRepo.save(nc);
+        audit.log("NC", soHieu, "CHUYEN_TRANG_THAI", tu.name(), NcStatus.Cancelled.name(), req.lyDo, req.actor);
+        if (laNguonKhieuNai(nc)) ticketCallbackHook.mocDong(nc, "Cancelled");
         return nc;
     }
 

@@ -12,6 +12,7 @@ public class AppProperties {
     private Capa capa = new Capa();
     private Nc nc = new Nc();
     private Sod sod = new Sod();
+    private Ticket ticket = new Ticket();
 
     public Seed getSeed() { return seed; }
     public void setSeed(Seed seed) { this.seed = seed; }
@@ -21,6 +22,8 @@ public class AppProperties {
     public void setNc(Nc nc) { this.nc = nc; }
     public Sod getSod() { return sod; }
     public void setSod(Sod sod) { this.sod = sod; }
+    public Ticket getTicket() { return ticket; }
+    public void setTicket(Ticket ticket) { this.ticket = ticket; }
 
     public static class Seed {
         private boolean enabled = true;
@@ -49,5 +52,18 @@ public class AppProperties {
         private boolean enabled = true;
         public boolean isEnabled() { return enabled; }
         public void setEnabled(boolean enabled) { this.enabled = enabled; }
+    }
+
+    public static class Ticket {
+        /** URL hệ ticket nhận callback. Mặc định trỏ receiver mô phỏng nội bộ. */
+        private String callbackUrl = "http://localhost:8080/api/v1/ticket-sim/callback";
+        private int maxRetry = 3;
+        private int retryDelaySeconds = 60;
+        public String getCallbackUrl() { return callbackUrl; }
+        public void setCallbackUrl(String v) { this.callbackUrl = v; }
+        public int getMaxRetry() { return maxRetry; }
+        public void setMaxRetry(int v) { this.maxRetry = v; }
+        public int getRetryDelaySeconds() { return retryDelaySeconds; }
+        public void setRetryDelaySeconds(int v) { this.retryDelaySeconds = v; }
     }
 }

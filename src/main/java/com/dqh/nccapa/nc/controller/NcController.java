@@ -62,6 +62,11 @@ public class NcController {
         return ApiResponse.ok(ncService.reject(so, req));
     }
 
+    @PostMapping("/{so}/cancel")
+    public ApiResponse<Nc> cancel(@PathVariable("so") String so, @Valid @RequestBody RejectRequest req) {
+        return ApiResponse.ok(ncService.cancel(so, req));
+    }
+
     @PostMapping("/{so}/confirm-done")
     public ApiResponse<Nc> confirmDone(@PathVariable("so") String so, @Valid @RequestBody ConfirmDoneRequest req) {
         return ApiResponse.ok(ncService.confirmDone(so, req));
