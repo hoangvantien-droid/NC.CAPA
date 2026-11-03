@@ -18,6 +18,7 @@ import com.dqh.nccapa.common.enums.LoaiThayDoi;
 import com.dqh.nccapa.common.enums.Severity;
 import com.dqh.nccapa.common.error.BusinessException;
 import com.dqh.nccapa.common.security.RoleChecker;
+import com.dqh.nccapa.common.version.RecordVersionService;
 import com.dqh.nccapa.config.AppProperties;
 import com.dqh.nccapa.nc.entity.Nc;
 import com.dqh.nccapa.nc.repository.NcRepository;
@@ -28,7 +29,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Nghiệp vụ CAPA — lát 5: tạo CAPA + vòng Open→Investigating→ActionPlan→Processing→Monitoring
@@ -51,13 +54,15 @@ public class CapaService {
     private final AuditService audit;
     private final PrService prService;
     private final RoleChecker roleChecker;
+    private final RecordVersionService recordVersionService;
 
     public CapaService(CapaRepository capaRepo, CapaActionRepository actionRepo,
                        CapaActionExtensionRepository extRepo, CapaVerificationRepository verRepo,
                        com.dqh.nccapa.capa.repository.Capa8dStepRepository stepRepo,
                        NcCapaLinkDao linkDao, NcRepository ncRepo, NcService ncService,
                        MesLotCounter mesLotCounter, AppProperties appProps, JdbcTemplate jdbc,
-                       AuditService audit, PrService prService, RoleChecker roleChecker) {
+                       AuditService audit, PrService prService, RoleChecker roleChecker,
+                       RecordVersionService recordVersionService) {
         this.capaRepo = capaRepo;
         this.actionRepo = actionRepo;
         this.extRepo = extRepo;
@@ -72,6 +77,7 @@ public class CapaService {
         this.audit = audit;
         this.prService = prService;
         this.roleChecker = roleChecker;
+        this.recordVersionService = recordVersionService;
     }
 
     // ---- 8D (Đợt d) ----
@@ -373,6 +379,48 @@ public class CapaService {
         Capa capa = layCapa(capaId);
         yeuCau(capa, CapaStatus.Monitoring);
         return markIneffectiveInternal(capa, req.lyDo, req.actor);
+    }
+
+    /**
+     * Sửa KẾT QUẢ kiểm chứng CAPA ĐÃ XÁC NHẬN (REQ mục 7, invariant I7 — versioning).
+     *
+     * ÁP INVARIANT TẠI ĐÂY vì đây là điểm DUY NHẤT trong luồng CAPA sửa một bản ghi ĐÃ XÁC NHẬN:
+     * {@code capa_verification} chỉ có ket_qua = HIEU_QUA/KHONG_HIEU_QUA sau confirmEffective /
+     * markIneffective; confirmEffective/markIneffective tự chúng chỉ GHI LẦN ĐẦU (chưa có kết quả),
+     * nên không phải "sửa bản đã xác nhận". Method này là luồng sửa-lại sau khi đã có kết quả:
+     * TRƯỚC khi đổi ket_qua/bien_ban, gọi recordVersionService.luuSnapshot("CAPA_VERIFICATION", ...)
+     * để GIỮ snapshot giá trị CŨ (có liên kết version), rồi mới áp giá trị MỚI — không ghi đè trực tiếp.
+     *
+     * PHẠM VI: chỉ áp cho CAPA_VERIFICATION làm loại tiêu biểu; cơ chế RecordVersionService là dùng
+     * chung nên mở rộng cho disposition NC / loại khác về sau chỉ cần gọi luuSnapshot với doiTuongLoai mới.
+     */
+    @Transactional
+    public CapaVerification suaKetQuaKiemChung(Long capaId, SuaKetQuaKiemChungRequest req) {
+        CapaVerification ver = layVer(capaId);
+        if (ver.getKetQua() == null || ver.getKetQua().isBlank()) {
+            throw BusinessException.guard(
+                    "Kiểm chứng chưa xác nhận (chưa có kết quả) — không áp versioning sửa-lại");
+        }
+        // Snapshot giá trị CŨ (trước khi đổi) → lưu phiên bản trước rồi mới ghi đè.
+        Map<String, Object> banGhiCu = new LinkedHashMap<>();
+        banGhiCu.put("id", ver.getId());
+        banGhiCu.put("capaId", ver.getCapaId());
+        banGhiCu.put("ketQua", ver.getKetQua());
+        banGhiCu.put("bienBanKiemTra", ver.getBienBanKiemTra());
+        banGhiCu.put("xacNhanBoi", ver.getXacNhanBoi());
+        banGhiCu.put("xacNhanLuc", ver.getXacNhanLuc() == null ? null : ver.getXacNhanLuc().toString());
+        recordVersionService.luuSnapshot("CAPA_VERIFICATION", String.valueOf(ver.getId()),
+                banGhiCu, req.lyDo, req.actor);
+
+        // Áp giá trị MỚI.
+        ver.setKetQua(req.ketQua);
+        if (req.bienBanKiemTra != null) ver.setBienBanKiemTra(req.bienBanKiemTra);
+        ver.setXacNhanBoi(req.actor);
+        ver.setXacNhanLuc(LocalDateTime.now());
+        verRepo.save(ver);
+        audit.log("CAPA", String.valueOf(capaId), "SUA_KET_QUA_KIEM_CHUNG",
+                (String) banGhiCu.get("ketQua"), req.ketQua, req.lyDo, req.actor);
+        return ver;
     }
 
     private IneffectiveResult markIneffectiveInternal(Capa capa, String lyDo, String actor) {

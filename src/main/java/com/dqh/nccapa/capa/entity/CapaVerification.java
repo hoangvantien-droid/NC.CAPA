@@ -52,6 +52,8 @@ public class CapaVerification {
     public int getSoLanDoiHan() { return soLanDoiHan; }
     public String getBienBanKiemTra() { return bienBanKiemTra; }
     public String getKetQua() { return ketQua; }
+    public String getXacNhanBoi() { return xacNhanBoi; }
+    public LocalDateTime getXacNhanLuc() { return xacNhanLuc; }
 
     public void setHanKiemChungTiepTheo(LocalDateTime v) { this.hanKiemChungTiepTheo = v; }
     public void setSoLanDoiHan(int v) { this.soLanDoiHan = v; }
