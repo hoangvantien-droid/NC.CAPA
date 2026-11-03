@@ -11,6 +11,10 @@
 <body>
   <header class="topbar">
     <span class="brand">QLone<span class="sep">·</span>NC/CAPA</span>
+    <nav class="nav" style="margin-left:24px">
+      <a th:href="@{/}" class="on">Danh sách</a>
+      <a th:href="@{/dashboard}">Dashboard</a>
+    </nav>
     <span class="spacer"></span>
     <a class="btn btn-primary" th:href="@{/nc/tao}">+ Tạo NC</a>
   </header>

@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Dashboard — NC/CAPA</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="/css/app.css"/>
+</head>
+<body>
+  <header class="topbar">
+    <span class="brand">QLone<span class="sep">·</span>NC/CAPA</span>
+    <nav class="nav" style="margin-left:24px">
+      <a th:href="@{/}">Danh sách</a>
+      <a th:href="@{/dashboard}" class="on">Dashboard</a>
+    </nav>
+    <span class="spacer"></span>
+    <a class="btn btn-primary" th:href="@{/nc/tao}">+ Tạo NC</a>
+  </header>
+
+  <section class="statusbar">
+    <div class="stat"><span class="num" th:text="${d.tongMo}">0</span><span class="lbl">Phiếu đang mở</span></div>
+    <div class="stat warn"><span class="num" th:text="${d.quaHan}">0</span><span class="lbl">Quá hạn xử lý</span></div>
+    <div class="stat crit"><span class="num" th:text="${d.khoanhVung}">0</span><span class="lbl">Đang khoanh vùng</span></div>
+  </section>
+
+  <main class="dash">
+    <div class="dash-grid">
+
+      <!-- Tỷ lệ CAPA hiệu quả -->
+      <section class="card">
+        <h3>Hiệu quả CAPA</h3>
+        <div class="body">
+          <div class="ratio" th:if="${d.tyLeHieuQua != null}">
+            <span class="big" th:classappend="${d.tyLeHieuQua < 70} ? 'bad' : ''"
+                  th:text="${d.tyLeHieuQua} + '%'">—</span>
+            <span class="muted">CAPA hiệu quả</span>
+          </div>
+          <p class="muted" th:if="${d.tyLeHieuQua == null}">Chưa có CAPA nào hoàn tất kiểm chứng.</p>
+          <p class="muted" style="margin:10px 0 0;font-size:13px"
+             th:if="${d.tyLeHieuQua != null}">
+            Hiệu quả <span th:text="${d.capaHieuQua}">0</span> ·
+            Không hiệu quả <span th:text="${d.capaKhongHieuQua}">0</span>
+          </p>
+        </div>
+      </section>
+
+      <!-- Theo mức nghiêm trọng -->
+      <section class="card">
+        <h3>NC theo mức nghiêm trọng</h3>
+        <div class="body">
+          <div class="bars">
+            <div class="bar-row" th:each="e : ${d.theoMuc}">
+              <span class="k" th:text="${e.key == 'NHE'} ? 'Nhẹ' : (${e.key == 'NANG'} ? 'Nặng' : (${e.key == 'NGHIEM_TRONG'} ? 'Nghiêm trọng' : ${e.key}))">—</span>
+              <span class="bar-track"><span class="bar-fill" th:classappend="'sev-' + ${e.key}"
+                    th:style="'width:' + ${#numbers.formatDecimal(e.value * 100.0 / d.max(d.theoMuc),0,0)} + '%'"></span></span>
+              <span class="c" th:text="${e.value}">0</span>
+            </div>
+            <p class="muted" th:if="${d.theoMuc.isEmpty()}">Chưa có dữ liệu.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Theo trạng thái -->
+      <section class="card">
+        <h3>NC theo trạng thái</h3>
+        <div class="body">
+          <div class="bars">
+            <div class="bar-row" th:each="e : ${d.theoTrangThai}">
+              <span class="k" th:text="${e.key}">—</span>
+              <span class="bar-track"><span class="bar-fill"
+                    th:style="'width:' + ${#numbers.formatDecimal(e.value * 100.0 / d.max(d.theoTrangThai),0,0)} + '%'"></span></span>
+              <span class="c" th:text="${e.value}">0</span>
+            </div>
+            <p class="muted" th:if="${d.theoTrangThai.isEmpty()}">Chưa có dữ liệu.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Theo nguồn -->
+      <section class="card">
+        <h3>NC theo nguồn phát sinh</h3>
+        <div class="body">
+          <div class="bars">
+            <div class="bar-row" th:each="e : ${d.theoNguon}">
+              <span class="k" th:text="${e.key}">—</span>
+              <span class="bar-track"><span class="bar-fill"
+                    th:style="'width:' + ${#numbers.formatDecimal(e.value * 100.0 / d.max(d.theoNguon),0,0)} + '%'"></span></span>
+              <span class="c" th:text="${e.value}">0</span>
+            </div>
+            <p class="muted" th:if="${d.theoNguon.isEmpty()}">Chưa có dữ liệu.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Theo loại -->
+      <section class="card">
+        <h3>NC theo loại</h3>
+        <div class="body">
+          <div class="bars">
+            <div class="bar-row" th:each="e : ${d.theoLoai}">
+              <span class="k" th:text="${e.key}">—</span>
+              <span class="bar-track"><span class="bar-fill"
+                    th:style="'width:' + ${#numbers.formatDecimal(e.value * 100.0 / d.max(d.theoLoai),0,0)} + '%'"></span></span>
+              <span class="c" th:text="${e.value}">0</span>
+            </div>
+            <p class="muted" th:if="${d.theoLoai.isEmpty()}">Chưa có dữ liệu.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Theo nhà máy (chỉ khi không lọc) -->
+      <section class="card" th:if="${!d.theoNhaMay.isEmpty()}">
+        <h3>NC theo nhà máy</h3>
+        <div class="body">
+          <div class="bars">
+            <div class="bar-row" th:each="e : ${d.theoNhaMay}">
+              <span class="k" th:text="${e.key}">—</span>
+              <span class="bar-track"><span class="bar-fill"
+                    th:style="'width:' + ${#numbers.formatDecimal(e.value * 100.0 / d.max(d.theoNhaMay),0,0)} + '%'"></span></span>
+              <span class="c" th:text="${e.value}">0</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </main>
+</body>
+</html>

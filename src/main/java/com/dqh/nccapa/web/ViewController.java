@@ -23,11 +23,22 @@ public class ViewController {
     private final NcRepository ncRepo;
     private final NcService ncService;
     private final AuditService audit;
+    private final com.dqh.nccapa.report.ReportService reportService;
 
-    public ViewController(NcRepository ncRepo, NcService ncService, AuditService audit) {
+    public ViewController(NcRepository ncRepo, NcService ncService, AuditService audit,
+                          com.dqh.nccapa.report.ReportService reportService) {
         this.ncRepo = ncRepo;
         this.ncService = ncService;
         this.audit = audit;
+        this.reportService = reportService;
+    }
+
+    @GetMapping("/dashboard")
+    public String dashboard(@org.springframework.web.bind.annotation.RequestParam(value = "nhaMay", required = false) String nhaMay,
+                            Model model) {
+        model.addAttribute("d", reportService.dashboard(nhaMay));
+        model.addAttribute("nhaMay", nhaMay);
+        return "dashboard";
     }
 
     @GetMapping("/")
