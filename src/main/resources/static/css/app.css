@@ -128,8 +128,8 @@ dl.kv dd{margin:0}
 .bars{display:flex;flex-direction:column;gap:10px}
 .bar-row{display:grid;grid-template-columns:120px 1fr 44px;align-items:center;gap:10px;font-size:13.5px}
 .bar-row .k{color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.bar-track{height:10px;background:#EEF2EF;border-radius:999px;overflow:hidden}
-.bar-fill{height:100%;background:var(--seal);border-radius:999px}
+.bar-track{display:block;height:10px;background:#EEF2EF;border-radius:999px;overflow:hidden}
+.bar-fill{display:block;height:10px;min-width:2px;background:var(--seal);border-radius:999px}
 .bar-fill.sev-NANG{background:var(--amber)}
 .bar-fill.sev-NGHIEM_TRONG{background:var(--hold)}
 .bar-row .c{font-family:var(--mono);text-align:right;color:var(--muted)}
