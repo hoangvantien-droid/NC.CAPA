@@ -180,6 +180,14 @@ public class NcService {
                     "SoD: người đề xuất disposition không được tự duyệt");
         }
 
+        // SCOPE THEO NHÀ MÁY (phạm vi giới hạn: chỉ duyệt disposition NC):
+        // actor toàn tập đoàn (app_user.nha_may NULL) duyệt NC mọi nhà máy;
+        // actor gắn nhà máy cụ thể chỉ duyệt NC cùng nhà máy. Bổ sung cho guard role phía trên.
+        String nhaMayActor = roleChecker.nhaMayCua(req.actor);
+        if (nhaMayActor != null && !nhaMayActor.equals(nc.getNhaMay())) {
+            throw new BusinessException(ErrorCode.ROLE_DENIED, "Ngoài phạm vi nhà máy");
+        }
+
         // Siết SoD THEO ROLE THẬT (REQ mục 6.2, ma trận duyệt disposition): xác minh actor thực sự
         // có vai trò QA phù hợp với mức NC trong app_user_role, KHÔNG tin vai trò do client khai.
         //   - NC Nghiêm trọng: QA TẬP ĐOÀN (REQ: "NC Nghiêm trọng: QA tập đoàn").

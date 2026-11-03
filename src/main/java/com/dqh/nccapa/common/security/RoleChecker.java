@@ -38,4 +38,18 @@ public class RoleChecker {
     public boolean laQa(String username) {
         return coRole(username, "QA_NHA_MAY") || coRole(username, "QA_TAP_DOAN");
     }
+
+    /**
+     * Nhà máy gắn với {@code username} theo app_user.nha_may.
+     * Trả {@code null} nếu nha_may NULL trong DB (user toàn tập đoàn, ví dụ QA tập đoàn/admin)
+     * HOẶC user không tồn tại trong app_user. {@code null} nghĩa là thấy/thao tác mọi nhà máy.
+     */
+    public String nhaMayCua(String username) {
+        if (username == null || username.isBlank()) return null;
+        java.util.List<String> rows = jdbc.queryForList(
+                "SELECT nha_may FROM app_user WHERE username = ?",
+                String.class, username);
+        if (rows.isEmpty()) return null;
+        return rows.get(0);
+    }
 }

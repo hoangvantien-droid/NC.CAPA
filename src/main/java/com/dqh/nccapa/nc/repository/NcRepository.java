@@ -23,6 +23,8 @@ public interface NcRepository extends JpaRepository<Nc, String> {
 
     List<Nc> findTop200ByOrderByCreatedAtDesc();
 
+    List<Nc> findTop200ByNhaMayOrderByCreatedAtDesc(String nhaMay);
+
     long countByTrangThaiNot(NcStatus trangThai);
 
     long countByMucNghiemTrongAndTrangThaiNot(com.dqh.nccapa.common.enums.Severity muc, NcStatus trangThai);

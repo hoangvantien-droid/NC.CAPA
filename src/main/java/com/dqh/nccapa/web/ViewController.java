@@ -31,6 +31,8 @@ public class ViewController {
     private final com.dqh.nccapa.pr.repository.PrRepository prRepo;
     private final com.dqh.nccapa.pr.repository.PrLinkDao prLink;
     private final com.dqh.nccapa.ticket.repository.TicketCallbackOutboxRepository outboxRepo;
+    private final com.dqh.nccapa.demo.CurrentUserService currentUser;
+    private final com.dqh.nccapa.common.security.RoleChecker roleChecker;
 
     public ViewController(NcRepository ncRepo, NcService ncService, AuditService audit,
                           com.dqh.nccapa.report.ReportService reportService,
@@ -40,7 +42,9 @@ public class ViewController {
                           com.dqh.nccapa.pr.service.PrService prService,
                           com.dqh.nccapa.pr.repository.PrRepository prRepo,
                           com.dqh.nccapa.pr.repository.PrLinkDao prLink,
-                          com.dqh.nccapa.ticket.repository.TicketCallbackOutboxRepository outboxRepo) {
+                          com.dqh.nccapa.ticket.repository.TicketCallbackOutboxRepository outboxRepo,
+                          com.dqh.nccapa.demo.CurrentUserService currentUser,
+                          com.dqh.nccapa.common.security.RoleChecker roleChecker) {
         this.ncRepo = ncRepo;
         this.ncService = ncService;
         this.audit = audit;
@@ -52,6 +56,8 @@ public class ViewController {
         this.prRepo = prRepo;
         this.prLink = prLink;
         this.outboxRepo = outboxRepo;
+        this.currentUser = currentUser;
+        this.roleChecker = roleChecker;
     }
 
     @GetMapping("/dashboard")
@@ -63,8 +69,14 @@ public class ViewController {
     }
 
     @GetMapping("/")
-    public String danhSach(Model model) {
-        List<Nc> dsNc = ncRepo.findTop200ByOrderByCreatedAtDesc();
+    public String danhSach(jakarta.servlet.http.HttpSession session, Model model) {
+        // SCOPE THEO NHÀ MÁY: user hiện tại (demo) gắn nhà máy cụ thể chỉ thấy NC nhà máy mình;
+        // user toàn tập đoàn (app_user.nha_may NULL) thấy tất cả. Nguồn nhà máy lấy từ DB qua
+        // RoleChecker.nhaMayCua (thống nhất với seed app_user), không hardcode trong DemoUser.
+        String nhaMayUser = roleChecker.nhaMayCua(currentUser.hienTai(session).username());
+        List<Nc> dsNc = nhaMayUser == null
+                ? ncRepo.findTop200ByOrderByCreatedAtDesc()
+                : ncRepo.findTop200ByNhaMayOrderByCreatedAtDesc(nhaMayUser);
         model.addAttribute("dsNc", dsNc);
         model.addAttribute("dangMo", dsNc.stream()
                 .filter(n -> n.getTrangThai() != NcStatus.Closed && n.getTrangThai() != NcStatus.Cancelled)
