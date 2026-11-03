@@ -110,7 +110,10 @@ public class NcService {
         nc.setFoodSafety(foodSafety);
         nc.setMaLoiChinh(dongNangNhat.maLoiId);
         nc.setMaHangChinh(dongNangNhat.maHang);
-        ncRepo.save(nc);
+        // saveAndFlush: ép INSERT xuống DB ngay (so_hieu là id gán sẵn → JPA hoãn INSERT tới flush;
+        // recurrenceHook đếm NC qua JdbcTemplate KHÔNG kích hoạt autoflush của Hibernate nên nếu không
+        // flush, dòng NC mới chưa có trong DB và bị đếm thiếu 1 lần). Xem RecurrenceDetector.
+        ncRepo.saveAndFlush(nc);
 
         for (TaoNcRequest.ChiTieuItem ct : req.chiTieu) {
             chiTieuRepo.save(new NcChiTieu(soHieu, ct.maLoiId, ct.maHang, ct.inOutSpec,

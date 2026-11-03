@@ -56,7 +56,8 @@ public class RecurrenceDetector implements RecurrenceHook {
 
         int windowDays = appProps.getNc().getRecurrenceWindowDays();
         // Đếm NC cùng cặp (mã hàng + mã lỗi) có created_at trong [now - windowDays, now].
-        // Kể cả NC mới (nó đã được lưu trước khi hook chạy) → count = số lần xuất hiện trong cửa sổ.
+        // Kể cả NC mới: taoNc() gọi ncRepo.saveAndFlush(nc) trước khi chạy hook nên dòng NC mới
+        // đã có trong DB → count = số lần xuất hiện trong cửa sổ (REQ: lần thứ 3 → mở PR).
         Long soLan = jdbc.queryForObject(
             "SELECT COUNT(*) FROM nc " +
             "WHERE ma_hang_chinh = ? AND ma_loi_chinh = ? " +
@@ -67,12 +68,11 @@ public class RecurrenceDetector implements RecurrenceHook {
 
         // Đủ ngưỡng tái diễn → bắt buộc mở PR thật cho vấn đề (mã hàng + mã lỗi). Idempotent:
         // nếu đã có PR đang mở cho vấn đề (fail lần 2 / TH2 / tái diễn trước) thì link NC mới, không mở PR thứ 2.
+        // maHang/maLoi đã được guard non-null ở trên → moTuDong không trả null tại đây.
         Pr pr = prService.moTuDong(LoaiThayDoi.QUY_TRINH_TB_SOP,
                 maHang, maLoi, ncMoi.getSoHieu(), null, "SYSTEM");
-        audit.log("NC", ncMoi.getSoHieu(), "MO_PR", null,
-                pr != null ? String.valueOf(pr.getId()) : null,
-                "tái diễn lần " + soLan + " trong " + windowDays + " ngày"
-                        + (pr != null ? " · PR#" + pr.getId() : ""), "SYSTEM");
+        audit.log("NC", ncMoi.getSoHieu(), "MO_PR", null, String.valueOf(pr.getId()),
+                "tái diễn lần " + soLan + " trong " + windowDays + " ngày · PR#" + pr.getId(), "SYSTEM");
         return true;
     }
 }
