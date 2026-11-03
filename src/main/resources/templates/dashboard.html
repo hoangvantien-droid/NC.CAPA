@@ -18,7 +18,9 @@
       <a th:href="@{/ticket}">Ticket</a>
     </nav>
     <span class="spacer"></span>
-    <div th:replace="~{fragments/user-switcher :: userSwitcher}"></div>
+    <a class="btn" th:href="@{/api/v1/report/export/excel(nhaMay=${nhaMay})}" style="margin-left:12px">Xuất Excel</a>
+    <a class="btn" th:href="@{/api/v1/report/export/pdf(nhaMay=${nhaMay})}" style="margin-left:8px">Xuất PDF</a>
+    <div th:replace="~{fragments/user-switcher :: userSwitcher}" style="margin-left:12px"></div>
     <a class="btn btn-primary" th:href="@{/nc/tao}" style="margin-left:12px">+ Tạo NC</a>
   </header>
 
