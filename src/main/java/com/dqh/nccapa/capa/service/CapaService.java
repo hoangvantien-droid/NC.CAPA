@@ -313,6 +313,12 @@ public class CapaService {
     public Capa postponeReminder(Long capaId, PostponeRequest req) {
         Capa capa = layCapa(capaId);
         yeuCau(capa, CapaStatus.Monitoring);
+        // Điểm mở #7 / quy tắc #14: NC gốc Nặng trở lên → chỉ QA TẬP ĐOÀN được dời hạn mốc kiểm chứng.
+        // NC Nhẹ: giữ nguyên hành vi cũ (không kiểm vai trò).
+        if (mucNcGocCaoNhat(capaId).ordinalGte(Severity.NANG) && !laQaTapDoan(req.actor)) {
+            throw BusinessException.guard(
+                    "NC Nặng trở lên: chỉ QA tập đoàn được dời hạn mốc kiểm chứng");
+        }
         CapaVerification ver = layVer(capaId);
         if (ver.getSoLanDoiHan() >= appProps.getCapa().getReminder().getMaxPostpone()) {
             // quá M lần → tự đánh Ineffective (commit side-effect, KHÔNG ném để tránh rollback)
@@ -459,6 +465,16 @@ public class CapaService {
             if (nc != null) max = Severity.nangNhat(max, nc.getMucNghiemTrong());
         }
         return max;
+    }
+
+    /** True nếu {@code username} có vai trò QA_TAP_DOAN (tra app_user_role JOIN app_user). */
+    boolean laQaTapDoan(String username) {
+        if (username == null || username.isBlank()) return false;
+        Integer n = jdbc.queryForObject(
+                "SELECT COUNT(*) FROM app_user_role ur JOIN app_user u ON u.id = ur.user_id " +
+                "WHERE u.username = ? AND ur.role_ma = 'QA_TAP_DOAN'",
+                Integer.class, username);
+        return n != null && n > 0;
     }
 
     private void yeuCau(Capa capa, CapaStatus expected) {

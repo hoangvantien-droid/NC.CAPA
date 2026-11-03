@@ -33,7 +33,12 @@ class CapaVerificationTest extends MySqlTestBase {
     @Autowired JdbcTemplate jdbc;
 
     @BeforeEach
-    void setUp() { DefectSeed.seed(jdbc); }
+    void setUp() {
+        DefectSeed.seed(jdbc);
+        // "qatd" là QA TẬP ĐOÀN để qua guard dời hạn (điểm mở #7): seed demo tắt ở profile test
+        // nên app_user_role rỗng — phải seed trực tiếp vai trò cho actor dời hạn.
+        DefectSeed.seedUserRole(jdbc, "qatd", "QA_TAP_DOAN");
+    }
 
     private Nc taoNc(String maLoi, String lo) {
         TaoNcRequest r = new TaoNcRequest();
@@ -111,6 +116,37 @@ class CapaVerificationTest extends MySqlTestBase {
         // lần 3: so_lan_doi_han(2) >= M(2) -> tự Ineffective, không ném
         capaService.postponeReminder(id, p);
         assertThat(capaService.layCapa(id).getTrangThai()).isEqualTo(CapaStatus.Ineffective);
+    }
+
+    @Test // Điểm mở #7/#14: NC Nặng -> actor KHÔNG phải QA_TAP_DOAN bị chặn dời hạn
+    void ncNang_actorThuong_khongDoiHanDuoc() {
+        Nc nc = taoNc("PRC-02", "LOT-V5"); // PRC-02 = Nặng
+        Long id = capaToMonitoring(nc.getSoHieu(), 3);
+        DefectSeed.seedUserRole(jdbc, "sxmgp", "BO_PHAN_SX"); // actor có user nhưng không phải QA_TAP_DOAN
+        PostponeRequest p = new PostponeRequest(); p.soNgayDoiThem = 7; p.lyDo = "thiếu lô"; p.actor = "sxmgp";
+        assertThatThrownBy(() -> capaService.postponeReminder(id, p))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("QA tập đoàn");
+    }
+
+    @Test // Điểm mở #7/#14: NC Nặng -> actor QA_TAP_DOAN dời hạn được
+    void ncNang_qaTapDoan_doiHanDuoc() {
+        Nc nc = taoNc("PRC-02", "LOT-V6"); // PRC-02 = Nặng
+        Long id = capaToMonitoring(nc.getSoHieu(), 3);
+        PostponeRequest p = new PostponeRequest(); p.soNgayDoiThem = 7; p.lyDo = "thiếu lô"; p.actor = "qatd";
+        capaService.postponeReminder(id, p);
+        VerificationStatus st = capaService.verificationStatus(id);
+        assertThat(st.soLanDoiHan).isEqualTo(1);
+    }
+
+    @Test // Điểm mở #7/#14: NC Nhẹ -> guard không áp, actor thường vẫn dời hạn được
+    void ncNhe_actorThuong_doiHanDuoc() {
+        Nc nc = taoNc("REC-06", "LOT-V7"); // REC-06 = Nhẹ (N=0)
+        Long id = capaToMonitoring(nc.getSoHieu(), 3);
+        PostponeRequest p = new PostponeRequest(); p.soNgayDoiThem = 7; p.lyDo = "chưa đủ bằng chứng"; p.actor = "sxmgp";
+        capaService.postponeReminder(id, p); // không bị chặn dù actor không phải QA_TAP_DOAN
+        VerificationStatus st = capaService.verificationStatus(id);
+        assertThat(st.soLanDoiHan).isEqualTo(1);
     }
 
     @Test // AC9: CAPA Ineffective + handover -> NC gốc đóng được (không treo)

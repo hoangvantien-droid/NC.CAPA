@@ -30,4 +30,16 @@ public final class DefectSeed {
                 "nguoi_so_huu, hieu_luc_tu) VALUES (?,?,?,?,?,?,?, 'QA_TAP_DOAN', '2026-01-01')",
                 ma, nhom, ten, muc, nguy, kv, nhomN);
     }
+
+    /**
+     * Seed một user + vai trò vào app_user_role (dùng cho guard kiểm vai trò ở test, khi seed demo tắt).
+     * Idempotent: tạo role/app_user nếu chưa có rồi gán (user_id, role_ma).
+     */
+    public static void seedUserRole(JdbcTemplate jdbc, String username, String roleMa) {
+        jdbc.update("INSERT IGNORE INTO role(ma, ten) VALUES (?, ?)", roleMa, roleMa);
+        jdbc.update("INSERT IGNORE INTO app_user(username, full_name, nha_may, active) VALUES (?, ?, NULL, 1)",
+                username, username);
+        jdbc.update("INSERT IGNORE INTO app_user_role(user_id, role_ma) " +
+                "SELECT id, ? FROM app_user WHERE username = ?", roleMa, username);
+    }
 }
