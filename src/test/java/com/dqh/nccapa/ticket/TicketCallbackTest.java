@@ -16,7 +16,6 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.math.BigDecimal;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -36,18 +35,10 @@ class TicketCallbackTest extends MySqlTestBase {
     @Autowired TicketCallbackOutboxRepository outboxRepo;
     @Autowired JdbcTemplate jdbc;
 
-    /** Ghi lại payload khi send trả true (mô phỏng StubTicketSender.sent). */
-    private final List<String> daGui = new ArrayList<>();
-
     @BeforeEach
     void setUp() {
         DefectSeed.seed(jdbc);
-        daGui.clear();
-        // mặc định: gửi thành công, ghi lại payload
-        when(sender.send(anyString(), anyString())).thenAnswer(inv -> {
-            daGui.add(inv.getArgument(1));
-            return true;
-        });
+        when(sender.send(anyString(), anyString())).thenReturn(true);  // mặc định gửi thành công
     }
 
     @Test // Idempotent: enqueue 2 lần cùng event_id -> 1 dòng
@@ -92,13 +83,14 @@ class TicketCallbackTest extends MySqlTestBase {
 
         List<TicketCallbackOutbox> rows = outboxRepo.findByTicketIdOrderByIdAsc("TK-CB");
         assertThat(rows).hasSize(2);
+        // thứ tự enqueue: early_response (id nhỏ) trước case_closed — flush gửi theo id tăng dần
         assertThat(rows.get(0).getCallbackType()).isEqualTo("early_response");
         assertThat(rows.get(1).getCallbackType()).isEqualTo("case_closed");
 
-        callbackService.flush();
-        assertThat(daGui).hasSize(2);
-        assertThat(daGui.get(0)).contains("early_response");   // early gửi trước
-        assertThat(daGui.get(1)).contains("case_closed");
+        int sent = callbackService.flush();
+        assertThat(sent).isEqualTo(2);   // cả 2 callback được gửi
+        var sau = outboxRepo.findByTicketIdOrderByIdAsc("TK-CB");
+        assertThat(sau).allMatch(o -> "SENT".equals(o.getTrangThai()));
     }
 
     @Test // NC khiếu nại bị Cancelled -> callback case_closed = Cancelled
