@@ -88,5 +88,24 @@ public class CapaController {
     public ApiResponse<IneffectiveResult> markIneffective(@PathVariable("id") Long id, @Valid @RequestBody MarkIneffectiveRequest req) {
         return ApiResponse.ok(capaService.markIneffective(id, req));
     }
+
+    @PostMapping("/capa/{id}/8d/enable")
+    public ApiResponse<java.util.List<com.dqh.nccapa.capa.entity.Capa8dStep>> bat8d(
+            @PathVariable("id") Long id,
+            @org.springframework.web.bind.annotation.RequestParam("actor") String actor) {
+        return ApiResponse.ok(capaService.bat8d(id, actor));
+    }
+
+    @GetMapping("/capa/{id}/8d")
+    public ApiResponse<java.util.List<com.dqh.nccapa.capa.entity.Capa8dStep>> steps8d(@PathVariable("id") Long id) {
+        return ApiResponse.ok(capaService.steps8d(id));
+    }
+
+    @PostMapping("/capa/{id}/8d/{buoc}/complete")
+    public ApiResponse<com.dqh.nccapa.capa.entity.Capa8dStep> hoanThanhBuoc(
+            @PathVariable("id") Long id, @PathVariable("buoc") String buoc,
+            @Valid @RequestBody com.dqh.nccapa.capa.dto.CompleteStepRequest req) {
+        return ApiResponse.ok(capaService.hoanThanhBuoc8d(id, buoc, req));
+    }
 }
 

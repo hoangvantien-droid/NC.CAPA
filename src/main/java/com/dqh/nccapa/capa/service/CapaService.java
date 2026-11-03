@@ -38,6 +38,7 @@ public class CapaService {
     private final CapaActionRepository actionRepo;
     private final CapaActionExtensionRepository extRepo;
     private final CapaVerificationRepository verRepo;
+    private final com.dqh.nccapa.capa.repository.Capa8dStepRepository stepRepo;
     private final NcCapaLinkDao linkDao;
     private final NcRepository ncRepo;
     private final NcService ncService;
@@ -48,6 +49,7 @@ public class CapaService {
 
     public CapaService(CapaRepository capaRepo, CapaActionRepository actionRepo,
                        CapaActionExtensionRepository extRepo, CapaVerificationRepository verRepo,
+                       com.dqh.nccapa.capa.repository.Capa8dStepRepository stepRepo,
                        NcCapaLinkDao linkDao, NcRepository ncRepo, NcService ncService,
                        MesLotCounter mesLotCounter, AppProperties appProps, JdbcTemplate jdbc,
                        AuditService audit) {
@@ -55,6 +57,7 @@ public class CapaService {
         this.actionRepo = actionRepo;
         this.extRepo = extRepo;
         this.verRepo = verRepo;
+        this.stepRepo = stepRepo;
         this.linkDao = linkDao;
         this.ncRepo = ncRepo;
         this.ncService = ncService;
@@ -62,6 +65,39 @@ public class CapaService {
         this.appProps = appProps;
         this.jdbc = jdbc;
         this.audit = audit;
+    }
+
+    // ---- 8D (Đợt d) ----
+
+    /** Bật chế độ 8D cho CAPA: tạo đủ 9 bước D0..D8 (nếu chưa có). */
+    @Transactional
+    public List<com.dqh.nccapa.capa.entity.Capa8dStep> bat8d(Long capaId, String actor) {
+        Capa capa = layCapa(capaId);
+        capa.setIs8d(true);
+        capaRepo.save(capa);
+        if (stepRepo.findByCapaIdOrderByBuocAsc(capaId).isEmpty()) {
+            for (com.dqh.nccapa.common.enums.Disciplines8D d : com.dqh.nccapa.common.enums.Disciplines8D.values()) {
+                stepRepo.save(new com.dqh.nccapa.capa.entity.Capa8dStep(capaId, d.name()));
+            }
+        }
+        audit.log("CAPA", String.valueOf(capaId), "BAT_8D", null, "D0..D8", null, actor);
+        return stepRepo.findByCapaIdOrderByBuocAsc(capaId);
+    }
+
+    /** Hoàn thành một bước 8D. */
+    @Transactional
+    public com.dqh.nccapa.capa.entity.Capa8dStep hoanThanhBuoc8d(Long capaId, String buoc, CompleteStepRequest req) {
+        var step = stepRepo.findByCapaIdAndBuoc(capaId, buoc)
+                .orElseThrow(() -> BusinessException.notFound("CAPA chưa bật 8D hoặc không có bước " + buoc));
+        step.hoanThanh(req.noiDung, req.actor);
+        stepRepo.save(step);
+        audit.log("CAPA", String.valueOf(capaId), "HOAN_THANH_8D", null, buoc, null, req.actor);
+        return step;
+    }
+
+    @Transactional(readOnly = true)
+    public List<com.dqh.nccapa.capa.entity.Capa8dStep> steps8d(Long capaId) {
+        return stepRepo.findByCapaIdOrderByBuocAsc(capaId);
     }
 
     /** Tạo CAPA từ NC → set is_escalated, link nc_capa. NC KHÔNG đổi trạng thái chính (REQ 3.2). */
