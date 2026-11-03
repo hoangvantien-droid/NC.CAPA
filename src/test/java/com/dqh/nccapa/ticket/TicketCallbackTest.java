@@ -91,6 +91,11 @@ class TicketCallbackTest extends MySqlTestBase {
         assertThat(rows.get(0).getCallbackType()).isEqualTo("early_response");
         assertThat(rows.get(1).getCallbackType()).isEqualTo("case_closed");
 
+        Long pend = jdbc.queryForObject("SELECT COUNT(*) FROM ticket_callback_outbox WHERE trang_thai='PENDING'", Long.class);
+        Long pendDue = jdbc.queryForObject("SELECT COUNT(*) FROM ticket_callback_outbox WHERE trang_thai='PENDING' AND (thu_ke_tiep_luc IS NULL OR thu_ke_tiep_luc <= NOW())", Long.class);
+        assertThat(pend).as("tong PENDING").isEqualTo(2L);
+        assertThat(pendDue).as("PENDING toi han").isEqualTo(2L);
+
         int sent = callbackService.flush();
         assertThat(sent).isEqualTo(2);   // cả 2 callback được gửi
         var sau = outboxRepo.findByTicketIdOrderByIdAsc("TK-CB");
