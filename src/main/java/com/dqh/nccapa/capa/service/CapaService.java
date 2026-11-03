@@ -121,12 +121,15 @@ public class CapaService {
     public Capa toInvestigating(Long capaId, ToInvestigatingRequest req) {
         Capa capa = layCapa(capaId);
         yeuCau(capa, CapaStatus.Open);
-        if (mucNcGocCaoNhat(capaId).ordinalGte(Severity.NANG)
-                && (req.keHoachDieuTra == null || req.keHoachDieuTra.isBlank())) {
+        boolean coKeHoach = !isBlank(req.khMucTieu) || !isBlank(req.keHoachDieuTra);
+        if (mucNcGocCaoNhat(capaId).ordinalGte(Severity.NANG) && !coKeHoach) {
             throw BusinessException.businessRule(
-                    "NC Nặng trở lên: kế hoạch điều tra bắt buộc", "keHoachDieuTra");
+                    "NC Nặng trở lên: kế hoạch điều tra bắt buộc (ít nhất mục tiêu)", "khMucTieu");
         }
         capa.setKeHoachDieuTra(req.keHoachDieuTra);
+        capa.setKhMucTieu(req.khMucTieu);
+        capa.setKhPhuongPhap(req.khPhuongPhap);
+        capa.setKhNguonLuc(req.khNguonLuc);
         chuyen(capa, CapaStatus.Investigating, req.actor);
         return capa;
     }
@@ -144,7 +147,11 @@ public class CapaService {
             }
         }
         capa.setRcaNoiDung(req.rcaNoiDung);
+        capa.setRcaMethod(req.rcaMethod);
+        capa.setRcaData(req.rcaData);
         capa.setNhomNguyenNhan(req.nhomNguyenNhan);
+        capa.setNhomNguyenNhan6m(req.nhomNguyenNhan6m);
+        if (req.taiDien != null) capa.setTaiDien(req.taiDien);
         capa.setChiPhiDauTu(req.chiPhiDauTu);
         if (req.rpnS != null && req.rpnO != null && req.rpnD != null) {
             validateRpn(req.rpnS); validateRpn(req.rpnO); validateRpn(req.rpnD);

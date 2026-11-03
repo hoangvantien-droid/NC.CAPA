@@ -2,8 +2,11 @@ package com.dqh.nccapa.capa.dto;
 
 import jakarta.validation.constraints.NotBlank;
 
-/** C1: Open -> Investigating. keHoachDieuTra bắt buộc nếu NC gốc >= Nặng (bản vá #3). */
+/** C1: Open -> Investigating. Kế hoạch điều tra (mục tiêu/phương pháp/nguồn lực) bắt buộc nếu NC >= Nặng. */
 public class ToInvestigatingRequest {
-    public String keHoachDieuTra;   // optional với NC Nhẹ
+    public String keHoachDieuTra;   // (cũ, tuỳ chọn — giữ tương thích)
+    public String khMucTieu;        // mục tiêu
+    public String khPhuongPhap;     // phương pháp
+    public String khNguonLuc;       // nguồn lực
     @NotBlank public String actor;
 }

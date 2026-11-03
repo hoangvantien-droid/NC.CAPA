@@ -40,7 +40,11 @@
             <dt>Khắc phục tức thời</dt><dd th:text="${capa.khacPhucTucThoi} ?: '—'">—</dd>
             <dt>Ngăn tái diễn</dt><dd th:text="${capa.nganTaiDien} ?: '—'">—</dd>
             <dt>Nguyên nhân gốc</dt><dd th:text="${capa.rcaNoiDung} ?: '—'">—</dd>
-            <dt>Nhóm nguyên nhân</dt><dd th:text="${capa.nhomNguyenNhan} ?: '—'">—</dd>
+            <dt>Công cụ RCA</dt><dd th:text="${capa.rcaMethod} ?: '—'">—</dd>
+            <dt>Chi tiết RCA</dt><dd th:text="${capa.rcaData} ?: '—'" style="white-space:pre-wrap;font-family:var(--mono);font-size:12.5px">—</dd>
+            <dt>Nhóm nguyên nhân (6M)</dt><dd th:text="${capa.nhomNguyenNhan6m} ?: (${capa.nhomNguyenNhan} ?: '—')">—</dd>
+            <dt>Tái diễn</dt><dd th:text="${capa.taiDien} ? 'Có' : 'Không'">—</dd>
+            <dt>Kế hoạch điều tra</dt><dd th:text="${capa.khMucTieu} ?: (${capa.keHoachDieuTra} ?: '—')">—</dd>
             <dt>RPN (S×O×D)</dt><dd th:text="${capa.rpn() != null} ? ${capa.rpn()} : '—'">—</dd>
             <dt>Chi phí đầu tư</dt><dd th:text="${capa.chiPhiDauTu} ?: '—'">—</dd>
             <dt>Mốc kiểm chứng</dt><dd>
@@ -133,8 +137,19 @@
         var id = btn.getAttribute('data-id');
         var actor = prompt('Người thực hiện:', 'qademo'); if(!actor) return;
         var body = { actor: actor };
-        if(a==='to-investigating'){ body.keHoachDieuTra = prompt('Kế hoạch điều tra (để trống nếu NC Nhẹ):',''); }
-        if(a==='to-action-plan'){ body.rcaNoiDung=prompt('RCA:',''); body.nhomNguyenNhan=prompt('Nhóm nguyên nhân:',''); body.chiPhiDauTu=Number(prompt('Chi phí đầu tư:','0')); }
+        if(a==='to-investigating'){
+          body.khMucTieu = prompt('Mục tiêu điều tra (bắt buộc nếu NC Nặng+):','');
+          body.khPhuongPhap = prompt('Phương pháp:','');
+          body.khNguonLuc = prompt('Nguồn lực:','');
+        }
+        if(a==='to-action-plan'){
+          body.rcaMethod = prompt('Công cụ RCA (FIVE_WHY/FISHBONE/IS_IS_NOT):','FIVE_WHY');
+          body.rcaData = prompt('Nội dung RCA (JSON hoặc text, vd 5-Why):','{"w1":"","w2":"","w3":""}');
+          body.rcaNoiDung = prompt('Kết luận nguyên nhân gốc:','');
+          body.nhomNguyenNhan6m = prompt('Nhóm nguyên nhân 6M (MAN/MACHINE/MATERIAL/METHOD/MEASURE/ENVIRONMENT):','METHOD');
+          body.taiDien = confirm('Vấn đề có tái diễn không? (OK = Có)');
+          body.chiPhiDauTu = Number(prompt('Chi phí đầu tư:','0'));
+        }
         if(a==='to-processing'){ body.khacPhucTucThoi=prompt('Khắc phục tức thời:',''); body.nganTaiDien=prompt('Ngăn tái diễn:',''); }
         if(a==='to-monitoring'){ body.xNgay=Number(prompt('X ngày:','30')); body.nLo=Number(prompt('N lô (0 nếu nhóm N=0):','0')); }
         if(a==='postpone-reminder'){ body.soNgayDoiThem=Number(prompt('Dời thêm (ngày):','7')); body.lyDo=prompt('Lý do:',''); }
