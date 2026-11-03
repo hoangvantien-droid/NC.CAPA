@@ -53,8 +53,13 @@ class AttachmentHttpTest extends MySqlTestBase {
 
     @Test
     void upload_png_hopLe_tra200VaMetadata() throws Exception {
+        // Byte PNG thật (magic 89 50 4E 47 0D 0A 1A 0A) để qua bước sniff magic-number.
+        byte[] png = new byte[] {
+                (byte) 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A,
+                0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44, 0x52
+        };
         MockMultipartFile file = new MockMultipartFile(
-                "file", "anh.png", "image/png", new byte[] {1, 2, 3, 4});
+                "file", "anh.png", "image/png", png);
         mockMvc.perform(multipart("/api/v1/attachment")
                         .file(file)
                         .param("doiTuong", "NC")

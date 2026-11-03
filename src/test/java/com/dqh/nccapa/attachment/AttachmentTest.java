@@ -102,4 +102,32 @@ class AttachmentTest extends MySqlTestBase {
         assertThatThrownBy(() -> service.luu("KHAC", "1", file, "qa"))
                 .isInstanceOf(BusinessException.class);
     }
+
+    /** Byte PNG thật (magic 89 50 4E 47 0D 0A 1A 0A) khai image/png → OK, lưu content-type image/png. */
+    @Test
+    void upload_pngHopLe_sniffRaImagePng() {
+        byte[] png = pngBytes();
+        MockMultipartFile file = new MockMultipartFile("file", "anh.png", "image/png", png);
+        Attachment att = service.luu("NC", "KPH-0100", file, "qa");
+
+        assertThat(att.getContentType()).isEqualTo("image/png");
+        assertThat(att.getKichThuoc()).isEqualTo(png.length);
+    }
+
+    /** Byte .exe (magic 4D 5A "MZ") nhưng khai image/png → từ chối (nội dung không khớp loại khai). */
+    @Test
+    void upload_exeGiaDangPng_biTuChoi() {
+        byte[] exe = new byte[]{0x4D, 0x5A, (byte) 0x90, 0x00, 0x03, 0x00, 0x00, 0x00};
+        MockMultipartFile file = new MockMultipartFile("file", "virus.png", "image/png", exe);
+        assertThatThrownBy(() -> service.luu("NC", "KPH-0101", file, "qa"))
+                .isInstanceOf(BusinessException.class);
+    }
+
+    /** PNG hợp lệ: header gồm 8-byte signature + tối thiểu để test đủ dài. */
+    static byte[] pngBytes() {
+        return new byte[]{
+                (byte) 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A,
+                0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44, 0x52
+        };
+    }
 }

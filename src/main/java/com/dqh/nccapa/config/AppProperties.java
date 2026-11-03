@@ -73,7 +73,11 @@ public class AppProperties {
     public static class Upload {
         /** Thư mục lưu file đính kèm trên disk (Nhóm 2). */
         private String dir = "uploads";
+        /** Tổng dung lượng tối đa cho mỗi đối tượng (doiTuong+doiTuongId). Mặc định 50MB. */
+        private long maxTotalBytesPerObject = 50L * 1024 * 1024;
         public String getDir() { return dir; }
         public void setDir(String dir) { this.dir = dir; }
+        public long getMaxTotalBytesPerObject() { return maxTotalBytesPerObject; }
+        public void setMaxTotalBytesPerObject(long v) { this.maxTotalBytesPerObject = v; }
     }
 }

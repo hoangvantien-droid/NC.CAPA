@@ -16,7 +16,6 @@ import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
@@ -45,6 +44,18 @@ public class AttachmentService {
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             "application/octet-stream"
     );
+
+    /** Content-type dựa trên ZIP container (OOXML docx/xlsx). Magic đều là 50 4B 03 04 nên
+     *  KHÔNG phân biệt được bằng byte — dựa vào header client khai cho nhóm này. */
+    private static final Set<String> ZIP_BASED_HOP_LE = Set.of(
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            "application/vnd.ms-excel",
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "application/octet-stream"
+    );
+
+    /** Số byte header đọc để sniff magic-number. */
+    private static final int HEADER_LEN = 12;
 
     private final AttachmentRepository repo;
     private final AppProperties appProps;
@@ -80,13 +91,25 @@ public class AttachmentService {
             throw BusinessException.businessRule("File rỗng", "file");
         }
 
-        // Validate content-type: null → octet-stream (cho qua); ngoài whitelist → chặn.
-        String contentType = file.getContentType();
-        if (contentType == null || contentType.isBlank()) {
-            contentType = CT_MAC_DINH;
-        } else if (!CONTENT_TYPE_HOP_LE.contains(contentType)) {
-            throw BusinessException.businessRule("Loại file không được phép: " + contentType, "file");
+        // Đọc toàn bộ byte 1 lần: cần header để sniff magic + nội dung để ghi disk.
+        byte[] data;
+        try {
+            data = file.getBytes();
+        } catch (IOException e) {
+            throw new UncheckedIOException("Không đọc được file đính kèm", e);
         }
+
+        // Giới hạn TỔNG dung lượng cho (doiTuong, doiTuongId): tổng cũ + file mới.
+        long maxTotal = appProps.getUpload().getMaxTotalBytesPerObject();
+        long tongHienCo = repo.findByDoiTuongAndDoiTuongId(doiTuong, doiTuongId).stream()
+                .mapToLong(Attachment::getKichThuoc).sum();
+        if (tongHienCo + data.length > maxTotal) {
+            throw BusinessException.businessRule("Vượt tổng dung lượng cho phép", "file");
+        }
+
+        // Sniff loại thật bằng magic-number; quyết định content-type lưu DB (xem bảng trong xacDinhContentType).
+        String headerCt = file.getContentType();
+        String contentType = xacDinhContentType(headerCt, data);
 
         String tenGoc = file.getOriginalFilename() != null ? file.getOriginalFilename() : "file";
         String duoi = "";
@@ -97,17 +120,108 @@ public class AttachmentService {
         Path dich = baseDir().resolve(tenLuu);
         try {
             Files.createDirectories(baseDir());
-            try (var in = file.getInputStream()) {
-                Files.copy(in, dich, StandardCopyOption.REPLACE_EXISTING);
-            }
+            Files.write(dich, data);
         } catch (IOException e) {
             throw new UncheckedIOException("Không ghi được file đính kèm: " + tenLuu, e);
         }
 
         Attachment att = new Attachment(
                 doiTuong, doiTuongId, tenGoc, tenLuu,
-                contentType, file.getSize(), nguoiTai, LocalDateTime.now());
+                contentType, (long) data.length, nguoiTai, LocalDateTime.now());
         return repo.save(att);
+    }
+
+    /**
+     * Xác định content-type lưu DB dựa trên magic-number thật (sniff byte), KHÔNG tin header client.
+     *
+     * Ma trận quyết định (header client khai X + magic thật Y → kết quả):
+     * <pre>
+     * magic PNG  (89 50 4E 47)         → image/png          (bỏ qua header, dùng loại thật)
+     * magic JPEG (FF D8 FF)            → image/jpeg
+     * magic GIF  (47 49 46 38, "GIF8") → image/gif
+     * magic PDF  (25 50 44 46, "%PDF") → application/pdf
+     * magic WEBP (RIFF....WEBP)        → image/webp
+     * magic ZIP  (50 4B 03 04)         → nếu header khai 1 loại ZIP-based whitelist (docx/xlsx/octet)
+     *                                     → TIN header (không phân biệt docx vs xlsx vs zip bằng magic);
+     *                                     ngược lại → từ chối.
+     * KHÔNG match magic nào ở trên:
+     *   - header khai text/plain & nội dung là text in được  → text/plain
+     *   - header khai application/octet-stream (hoặc null)     → application/octet-stream
+     *   - còn lại (vd khai image/png nhưng byte là MZ/rác)     → TỪ CHỐI (nội dung không khớp loại khai)
+     * </pre>
+     * Nếu loại thật nhận diện được mà KHÔNG nằm trong whitelist → từ chối.
+     *
+     * Giới hạn đã biết: docx/xlsx/zip đều có magic 50 4B 03 04 nên với file ZIP-based ta buộc
+     * phải tin header client khai (không sniff phân biệt được bằng byte đầu).
+     */
+    private String xacDinhContentType(String headerCt, byte[] data) {
+        String header = headerCt == null ? "" : headerCt.trim();
+        String magic = detectMagic(data);
+
+        if (magic != null) {
+            if ("application/zip".equals(magic)) {
+                // ZIP container: tin header nếu là loại ZIP-based whitelist; octet-stream mặc định.
+                if (header.isBlank()) return CT_MAC_DINH;
+                if (ZIP_BASED_HOP_LE.contains(header)) return header;
+                throw BusinessException.businessRule("Nội dung file không khớp loại cho phép", "file");
+            }
+            // Magic nhận diện cụ thể (ảnh/pdf): dùng loại thật, chặn nếu ngoài whitelist.
+            if (!CONTENT_TYPE_HOP_LE.contains(magic)) {
+                throw BusinessException.businessRule("Loại file không được phép: " + magic, "file");
+            }
+            return magic;
+        }
+
+        // Không match magic cố định: text/plain hoặc octet-stream mới cho qua.
+        if ("text/plain".equals(header) && laTextInDuoc(data)) {
+            return "text/plain";
+        }
+        if (header.isBlank() || CT_MAC_DINH.equals(header)) {
+            return CT_MAC_DINH;
+        }
+        // Header khai loại có magic cố định (png/jpeg/pdf...) nhưng byte không khớp → gian lận.
+        throw BusinessException.businessRule("Nội dung file không khớp loại cho phép", "file");
+    }
+
+    /** So khớp signature cho các loại trong whitelist; trả null nếu không nhận diện được. */
+    private static String detectMagic(byte[] b) {
+        int n = b.length;
+        if (n >= 8 && (b[0] & 0xFF) == 0x89 && b[1] == 'P' && b[2] == 'N' && b[3] == 'G'
+                && (b[4] & 0xFF) == 0x0D && (b[5] & 0xFF) == 0x0A
+                && (b[6] & 0xFF) == 0x1A && (b[7] & 0xFF) == 0x0A) {
+            return "image/png";
+        }
+        if (n >= 3 && (b[0] & 0xFF) == 0xFF && (b[1] & 0xFF) == 0xD8 && (b[2] & 0xFF) == 0xFF) {
+            return "image/jpeg";
+        }
+        if (n >= 4 && b[0] == 'G' && b[1] == 'I' && b[2] == 'F' && b[3] == '8') {
+            return "image/gif";
+        }
+        if (n >= 4 && b[0] == '%' && b[1] == 'P' && b[2] == 'D' && b[3] == 'F') {
+            return "application/pdf";
+        }
+        if (n >= 12 && b[0] == 'R' && b[1] == 'I' && b[2] == 'F' && b[3] == 'F'
+                && b[8] == 'W' && b[9] == 'E' && b[10] == 'B' && b[11] == 'P') {
+            return "image/webp";
+        }
+        if (n >= 4 && b[0] == 'P' && b[1] == 'K' && (b[2] & 0xFF) == 0x03 && (b[3] & 0xFF) == 0x04) {
+            return "application/zip";
+        }
+        return null;
+    }
+
+    /**
+     * Kiểm tra header file có là text in được không (text/plain không có magic cố định).
+     * Chấp nhận ký tự in được + tab/newline/CR; từ chối byte NUL hoặc control khác.
+     */
+    private static boolean laTextInDuoc(byte[] b) {
+        int limit = Math.min(b.length, HEADER_LEN * 8);
+        for (int i = 0; i < limit; i++) {
+            int c = b[i] & 0xFF;
+            if (c == 0x09 || c == 0x0A || c == 0x0D) continue; // tab, LF, CR
+            if (c < 0x20 || c == 0x7F) return false;            // control/DEL → không phải text
+        }
+        return true;
     }
 
     @Transactional(readOnly = true)

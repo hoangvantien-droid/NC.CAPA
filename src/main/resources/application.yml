@@ -35,6 +35,7 @@ app:
     enabled: true                       # chặn người đề xuất tự duyệt cấp 1 (StateMachine §2.2)
   upload:
     dir: ${UPLOAD_DIR:uploads}          # thư mục lưu file đính kèm (Nhóm 2)
+    max-total-bytes-per-object: ${UPLOAD_MAX_TOTAL_BYTES:52428800}  # tổng dung lượng tối đa/đối tượng (mặc định 50MB)
 
 springdoc:
   swagger-ui:
