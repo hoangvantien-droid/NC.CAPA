@@ -1,0 +1,5 @@
+# UAT — sinh ra khi chạy test, không commit
+node_modules/
+test-results/
+playwright-report/
+results/
