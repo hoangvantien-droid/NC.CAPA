@@ -12,6 +12,9 @@ spring:
 app:
   seed:
     enabled: false        # test tự nạp dữ liệu cần thiết, không seed demo
+  ticket:
+    scheduler:
+      enabled: false      # test điều khiển flush thủ công (deterministic), tắt scheduler
   sod:
     enabled: true
   capa:

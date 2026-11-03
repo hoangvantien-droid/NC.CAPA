@@ -27,12 +27,20 @@ public class ViewController {
     private final com.dqh.nccapa.capa.service.CapaService capaService;
     private final com.dqh.nccapa.capa.repository.NcCapaLinkDao ncCapaLink;
     private final com.dqh.nccapa.capa.repository.CapaVerificationRepository verRepo;
+    private final com.dqh.nccapa.pr.service.PrService prService;
+    private final com.dqh.nccapa.pr.repository.PrRepository prRepo;
+    private final com.dqh.nccapa.pr.repository.PrLinkDao prLink;
+    private final com.dqh.nccapa.ticket.repository.TicketCallbackOutboxRepository outboxRepo;
 
     public ViewController(NcRepository ncRepo, NcService ncService, AuditService audit,
                           com.dqh.nccapa.report.ReportService reportService,
                           com.dqh.nccapa.capa.service.CapaService capaService,
                           com.dqh.nccapa.capa.repository.NcCapaLinkDao ncCapaLink,
-                          com.dqh.nccapa.capa.repository.CapaVerificationRepository verRepo) {
+                          com.dqh.nccapa.capa.repository.CapaVerificationRepository verRepo,
+                          com.dqh.nccapa.pr.service.PrService prService,
+                          com.dqh.nccapa.pr.repository.PrRepository prRepo,
+                          com.dqh.nccapa.pr.repository.PrLinkDao prLink,
+                          com.dqh.nccapa.ticket.repository.TicketCallbackOutboxRepository outboxRepo) {
         this.ncRepo = ncRepo;
         this.ncService = ncService;
         this.audit = audit;
@@ -40,6 +48,10 @@ public class ViewController {
         this.capaService = capaService;
         this.ncCapaLink = ncCapaLink;
         this.verRepo = verRepo;
+        this.prService = prService;
+        this.prRepo = prRepo;
+        this.prLink = prLink;
+        this.outboxRepo = outboxRepo;
     }
 
     @GetMapping("/dashboard")
@@ -109,6 +121,62 @@ public class ViewController {
             default -> List.of();
         };
         return ma.stream().map(m -> new HanhDong(m, NHAN_CAPA.getOrDefault(m, m))).toList();
+    }
+
+    // ---- PR ----
+
+    @GetMapping("/pr")
+    public String prList(Model model) {
+        model.addAttribute("dsPr", prRepo.findTop200ByOrderByIdDesc());
+        return "pr-list";
+    }
+
+    @GetMapping("/pr/{id}")
+    public String prDetail(@PathVariable("id") Long id, Model model) {
+        var pr = prService.lay(id);
+        model.addAttribute("pr", pr);
+        model.addAttribute("chuoi", pr.getLoaiThayDoi().chuoiDuyet());
+        model.addAttribute("lichSu", prService.lichSuDuyet(id));
+        model.addAttribute("ncs", prLink.ncsOfPr(id));
+        model.addAttribute("audit", audit.timTheo("PR", String.valueOf(id)));
+        model.addAttribute("hanhDong", hanhDongPr(pr));
+        // vai trò cần duyệt ở cấp hiện tại (nếu đang PendingApproval)
+        String vaiTroCanDuyet = null;
+        if (pr.getTrangThai().name().equals("PendingApproval")
+                && pr.getCapHienTai() < pr.getLoaiThayDoi().chuoiDuyet().size()) {
+            vaiTroCanDuyet = pr.getLoaiThayDoi().chuoiDuyet().get(pr.getCapHienTai());
+        }
+        model.addAttribute("vaiTroCanDuyet", vaiTroCanDuyet);
+        return "pr-detail";
+    }
+
+    private List<HanhDong> hanhDongPr(com.dqh.nccapa.pr.entity.Pr pr) {
+        List<String> ma = switch (pr.getTrangThai()) {
+            case Draft -> List.of("to-analyzing");
+            case Analyzing -> List.of("submit");
+            case PendingApproval -> List.of("approve", "reject");
+            case Rejected -> List.of("to-analyzing");
+            case Approved -> List.of("implement");
+            case Implementing -> List.of("close");
+            default -> List.of();
+        };
+        return ma.stream().map(m -> new HanhDong(m, NHAN_PR.getOrDefault(m, m))).toList();
+    }
+
+    private static final java.util.Map<String, String> NHAN_PR = java.util.Map.ofEntries(
+            java.util.Map.entry("to-analyzing", "Phân tích"),
+            java.util.Map.entry("submit", "Trình duyệt"),
+            java.util.Map.entry("approve", "Duyệt cấp này"),
+            java.util.Map.entry("reject", "Từ chối"),
+            java.util.Map.entry("implement", "Bắt đầu thực hiện"),
+            java.util.Map.entry("close", "Đóng PR"));
+
+    // ---- Ticket outbox ----
+
+    @GetMapping("/ticket")
+    public String ticketOutbox(Model model) {
+        model.addAttribute("rows", outboxRepo.findAll());
+        return "ticket-outbox";
     }
 
     private static final java.util.Map<String, String> NHAN_CAPA = java.util.Map.ofEntries(

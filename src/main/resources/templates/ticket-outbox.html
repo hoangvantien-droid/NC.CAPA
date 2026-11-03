@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Ticket — Callback outbox</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="/css/app.css"/>
+</head>
+<body>
+  <header class="topbar">
+    <span class="brand">QLone<span class="sep">·</span>NC/CAPA</span>
+    <nav class="nav" style="margin-left:24px">
+      <a th:href="@{/}">Danh sách</a><a th:href="@{/dashboard}">Dashboard</a>
+      <a th:href="@{/pr}">PR</a><a th:href="@{/ticket}" class="on">Ticket</a>
+    </nav>
+    <span class="spacer"></span>
+    <button class="btn btn-primary" id="flush">Gửi ngay các callback chờ</button>
+  </header>
+
+  <main class="wrap">
+    <h2 style="font-size:16px;margin:20px 0 8px">Hàng đợi callback về hệ ticket</h2>
+    <p class="hint" style="margin-bottom:12px">Callback phản hồi cho CSKH ở 2 mốc: phản hồi sớm (NC xong xử lý / CAPA chốt kế hoạch) và đóng hồ sơ. Gửi lỗi sẽ thử lại; quá số lần sẽ vào hàng chờ lỗi.</p>
+    <table>
+      <thead><tr><th>Ticket</th><th>Loại callback</th><th>Trạng thái</th><th>Số lần thử</th></tr></thead>
+      <tbody>
+        <tr th:each="r : ${rows}">
+          <td class="id" th:text="${r.ticketId}">—</td>
+          <td th:text="${r.callbackType == 'early_response'} ? 'Phản hồi sớm' : 'Đóng hồ sơ'">—</td>
+          <td><span class="pill"
+                th:classappend="${r.trangThai == 'SENT'} ? 'sev-NHE' : (${r.trangThai == 'DEAD_LETTER'} ? 'sev-NGHIEM_TRONG' : 'sev-NANG')"
+                th:text="${r.trangThai == 'SENT'} ? 'Đã gửi' : (${r.trangThai == 'DEAD_LETTER'} ? 'Lỗi (hàng chờ)' : 'Chờ gửi')">—</span></td>
+          <td class="id muted" th:text="${r.soLanThu}">0</td>
+        </tr>
+        <tr th:if="${rows.isEmpty()}"><td colspan="4" class="empty">Chưa có callback nào. Đóng một NC nguồn khiếu nại để sinh callback.</td></tr>
+      </tbody>
+    </table>
+  </main>
+
+  <script th:inline="none">
+    document.getElementById('flush').addEventListener('click', function(){
+      fetch('/api/v1/ticket/flush', { method:'POST' })
+        .then(function(r){ return r.json(); })
+        .then(function(res){ if(res.success){ alert('Đã gửi ' + res.data + ' callback.'); location.reload(); }
+          else { alert('Lỗi: ' + (res.error ? res.error.message : '')); } })
+        .catch(function(e){ alert('Lỗi mạng: '+e); });
+    });
+  </script>
+</body>
+</html>

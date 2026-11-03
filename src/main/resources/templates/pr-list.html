@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>PR — Báo cáo vấn đề</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="/css/app.css"/>
+</head>
+<body>
+  <header class="topbar">
+    <span class="brand">QLone<span class="sep">·</span>NC/CAPA</span>
+    <nav class="nav" style="margin-left:24px">
+      <a th:href="@{/}">Danh sách</a>
+      <a th:href="@{/dashboard}">Dashboard</a>
+      <a th:href="@{/pr}" class="on">PR</a>
+      <a th:href="@{/ticket}">Ticket</a>
+    </nav>
+  </header>
+
+  <main class="wrap">
+    <h2 style="font-size:16px;margin:20px 0 8px">Báo cáo vấn đề (PR)</h2>
+    <table>
+      <thead><tr><th>PR</th><th>Loại thay đổi</th><th>Trạng thái</th><th>Cấp duyệt</th><th>Mã hàng</th><th>Mã lỗi</th></tr></thead>
+      <tbody>
+        <tr th:each="p : ${dsPr}">
+          <td class="id"><a th:href="@{/pr/{id}(id=${p.id})}">PR#<span th:text="${p.id}">0</span></a></td>
+          <td class="muted" th:text="${p.loaiThayDoi}">—</td>
+          <td><span class="pill st" th:text="${p.trangThai}">—</span></td>
+          <td class="muted" th:text="${p.trangThai.name() == 'PendingApproval'} ? ('cấp ' + (${p.capHienTai} + 1)) : '—'">—</td>
+          <td class="id muted" th:text="${p.maHang} ?: '—'">—</td>
+          <td class="id muted" th:text="${p.maLoiId} ?: '—'">—</td>
+        </tr>
+        <tr th:if="${dsPr.isEmpty()}"><td colspan="6" class="empty">Chưa có PR. PR được mở khi CAPA fail lần 2 / tái diễn lần 3, hoặc tạo qua API.</td></tr>
+      </tbody>
+    </table>
+  </main>
+</body>
+</html>
