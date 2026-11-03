@@ -24,13 +24,22 @@ public class ViewController {
     private final NcService ncService;
     private final AuditService audit;
     private final com.dqh.nccapa.report.ReportService reportService;
+    private final com.dqh.nccapa.capa.service.CapaService capaService;
+    private final com.dqh.nccapa.capa.repository.NcCapaLinkDao ncCapaLink;
+    private final com.dqh.nccapa.capa.repository.CapaVerificationRepository verRepo;
 
     public ViewController(NcRepository ncRepo, NcService ncService, AuditService audit,
-                          com.dqh.nccapa.report.ReportService reportService) {
+                          com.dqh.nccapa.report.ReportService reportService,
+                          com.dqh.nccapa.capa.service.CapaService capaService,
+                          com.dqh.nccapa.capa.repository.NcCapaLinkDao ncCapaLink,
+                          com.dqh.nccapa.capa.repository.CapaVerificationRepository verRepo) {
         this.ncRepo = ncRepo;
         this.ncService = ncService;
         this.audit = audit;
         this.reportService = reportService;
+        this.capaService = capaService;
+        this.ncCapaLink = ncCapaLink;
+        this.verRepo = verRepo;
     }
 
     @GetMapping("/dashboard")
@@ -66,6 +75,10 @@ public class ViewController {
         model.addAttribute("doiTuong", ncService.doiTuongCua(so));
         model.addAttribute("audit", audit.timTheo("NC", so));
         model.addAttribute("hanhDong", hanhDongChoPhep(nc));
+        // CAPA liên kết
+        List<com.dqh.nccapa.capa.entity.Capa> capas = ncCapaLink.capaIdsOfNc(so).stream()
+                .map(capaService::layCapa).toList();
+        model.addAttribute("capas", capas);
         return "nc-detail";
     }
 
@@ -73,6 +86,40 @@ public class ViewController {
     public String formTao() {
         return "nc-create";
     }
+
+    @GetMapping("/capa/{id}")
+    public String capaDetail(@PathVariable("id") Long id, Model model) {
+        var capa = capaService.layCapa(id);
+        model.addAttribute("capa", capa);
+        model.addAttribute("actions", capaService.actionsCua(id));
+        model.addAttribute("audit", audit.timTheo("CAPA", String.valueOf(id)));
+        model.addAttribute("ncs", ncCapaLink.ncSoHieuOfCapa(id));
+        model.addAttribute("hanhDong", hanhDongCapa(capa));
+        model.addAttribute("steps8d", capa.getTrangThai() != null ? capaService.steps8d(id) : java.util.List.of());
+        return "capa-detail";
+    }
+
+    private List<HanhDong> hanhDongCapa(com.dqh.nccapa.capa.entity.Capa capa) {
+        List<String> ma = switch (capa.getTrangThai()) {
+            case Open -> List.of("to-investigating");
+            case Investigating -> List.of("to-action-plan");
+            case ActionPlan -> List.of("add-action", "to-processing");
+            case Processing -> List.of("to-monitoring");
+            case Monitoring -> List.of("confirm-effective", "postpone-reminder", "mark-ineffective");
+            default -> List.of();
+        };
+        return ma.stream().map(m -> new HanhDong(m, NHAN_CAPA.getOrDefault(m, m))).toList();
+    }
+
+    private static final java.util.Map<String, String> NHAN_CAPA = java.util.Map.ofEntries(
+            java.util.Map.entry("to-investigating", "Bắt đầu điều tra"),
+            java.util.Map.entry("to-action-plan", "Chuyển kế hoạch hành động"),
+            java.util.Map.entry("add-action", "Thêm action"),
+            java.util.Map.entry("to-processing", "Bắt đầu thực hiện"),
+            java.util.Map.entry("to-monitoring", "Chuyển theo dõi"),
+            java.util.Map.entry("confirm-effective", "Xác nhận hiệu quả"),
+            java.util.Map.entry("postpone-reminder", "Dời hạn kiểm chứng"),
+            java.util.Map.entry("mark-ineffective", "Đánh không hiệu quả"));
 
     /** Nút hành động (mã + nhãn tiếng Việt) theo trạng thái; guard thật ở service. */
     public record HanhDong(String ma, String nhan) { }
@@ -86,20 +133,22 @@ public class ViewController {
             java.util.Map.entry("reject", "Từ chối"),
             java.util.Map.entry("resubmit", "Nộp lại"),
             java.util.Map.entry("confirm-done", "Xác nhận đã xử lý"),
-            java.util.Map.entry("verify-close", "Thẩm tra & đóng"));
+            java.util.Map.entry("verify-close", "Thẩm tra & đóng"),
+            java.util.Map.entry("cancel", "Hủy phiếu"),
+            java.util.Map.entry("capa", "Mở CAPA"));
 
     private List<HanhDong> hanhDongChoPhep(Nc nc) {
         List<String> ma = switch (nc.getTrangThai()) {
             case New -> nc.getMucNghiemTrong() == Severity.NHE
-                    ? List.of("close-fast", "escalate")
+                    ? List.of("close-fast", "escalate", "cancel")
                     : (nc.getMucNghiemTrong() == Severity.NGHIEM_TRONG || nc.isFoodSafety()
-                        ? List.of("containment", "escalate")
-                        : List.of("submit-approval", "escalate"));
-            case Containment -> List.of("submit-approval");
-            case PendingApproval -> List.of("approve", "reject");
+                        ? List.of("containment", "escalate", "cancel")
+                        : List.of("submit-approval", "escalate", "cancel"));
+            case Containment -> List.of("submit-approval", "cancel");
+            case PendingApproval -> List.of("approve", "reject", "cancel");
             case Rejected -> List.of("resubmit");
-            case Processing -> List.of("confirm-done");
-            case PendingVerification -> List.of("verify-close");
+            case Processing -> List.of("confirm-done", "capa");
+            case PendingVerification -> List.of("verify-close", "capa");
             default -> List.of();
         };
         return ma.stream().map(m -> new HanhDong(m, NHAN.getOrDefault(m, m))).toList();

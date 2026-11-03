@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title th:text="'CAPA#' + ${capa.id} + ' — NC/CAPA'">Chi tiết CAPA</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="/css/app.css"/>
+</head>
+<body>
+  <header class="topbar">
+    <span class="brand">QLone<span class="sep">·</span>NC/CAPA</span>
+    <nav class="nav" style="margin-left:24px">
+      <a th:href="@{/}">Danh sách</a>
+      <a th:href="@{/dashboard}">Dashboard</a>
+    </nav>
+    <span class="spacer"></span>
+    <a class="btn" th:href="@{/}">Danh sách</a>
+  </header>
+
+  <p class="crumb">
+    <a th:href="@{/}">Danh sách</a> /
+    <span th:each="n,it : ${ncs}"><a th:href="@{/nc/{s}(s=${n})}" class="id" th:text="${n}">NC</a><span th:if="${!it.last}">, </span></span>
+    / CAPA#<span th:text="${capa.id}">0</span>
+  </p>
+
+  <div class="detail">
+    <div style="display:flex;flex-direction:column;gap:24px">
+      <section class="panel">
+        <h2>Thông tin CAPA</h2>
+        <div class="body">
+          <div style="display:flex;gap:10px;align-items:center;margin-bottom:16px">
+            <span class="id" style="font-size:17px;font-weight:600">CAPA#<span th:text="${capa.id}">0</span></span>
+            <span class="pill st" th:text="${capa.trangThai}">—</span>
+            <span class="pill" th:if="${capa.trangThai.name() == 'Ineffective'}"
+                  style="background:var(--hold-weak);color:var(--hold)">Không hiệu quả</span>
+          </div>
+          <dl class="kv">
+            <dt>Khắc phục tức thời</dt><dd th:text="${capa.khacPhucTucThoi} ?: '—'">—</dd>
+            <dt>Ngăn tái diễn</dt><dd th:text="${capa.nganTaiDien} ?: '—'">—</dd>
+            <dt>Nguyên nhân gốc</dt><dd th:text="${capa.rcaNoiDung} ?: '—'">—</dd>
+            <dt>Nhóm nguyên nhân</dt><dd th:text="${capa.nhomNguyenNhan} ?: '—'">—</dd>
+            <dt>RPN (S×O×D)</dt><dd th:text="${capa.rpn() != null} ? ${capa.rpn()} : '—'">—</dd>
+            <dt>Chi phí đầu tư</dt><dd th:text="${capa.chiPhiDauTu} ?: '—'">—</dd>
+            <dt>Mốc kiểm chứng</dt><dd>
+              <span th:text="${capa.XNgay} != null ? ('X = ' + ${capa.XNgay} + ' ngày') : 'chưa đặt'">—</span>
+              <span th:if="${capa.NLo != null}" th:text="' · N = ' + ${capa.NLo} + ' lô'"></span>
+            </dd>
+          </dl>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>Action con</h2>
+        <div class="body">
+          <table>
+            <thead><tr><th>Loại</th><th>Mô tả</th><th>Phụ trách</th><th>Hạn</th><th>Trạng thái</th></tr></thead>
+            <tbody>
+              <tr th:each="a : ${actions}">
+                <td class="muted" th:text="${a.loai}">—</td>
+                <td th:text="${a.moTa} ?: '—'" style="max-width:220px">—</td>
+                <td class="muted" th:text="${a.nguoiPhuTrach}">—</td>
+                <td class="muted" th:text="${a.deadline}">—</td>
+                <td><span class="pill st" th:text="${a.trangThai}">—</span>
+                  <button th:if="${a.trangThai.name() != 'Completed'}" class="btn"
+                          style="padding:2px 8px;font-size:12px;margin-left:6px"
+                          th:data-complete="${a.id}">Hoàn thành</button></td>
+              </tr>
+              <tr th:if="${actions.isEmpty()}"><td colspan="5" class="empty">Chưa có action.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel" th:if="${!steps8d.isEmpty()}">
+        <h2>8D</h2>
+        <div class="body">
+          <table>
+            <thead><tr><th>Bước</th><th>Nội dung</th><th>Trạng thái</th></tr></thead>
+            <tbody>
+              <tr th:each="s : ${steps8d}">
+                <td class="id" th:text="${s.buoc}">—</td>
+                <td th:text="${s.noiDung} ?: '—'">—</td>
+                <td th:text="${s.hoanThanh} ? 'Xong' : '—'">—</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:24px">
+      <section class="panel">
+        <h2>Bước kế tiếp</h2>
+        <div class="body">
+          <div class="actions" th:if="${!hanhDong.isEmpty()}">
+            <button class="btn" th:each="h : ${hanhDong}"
+                    th:classappend="${h.ma == 'mark-ineffective'} ? 'danger' : ''"
+                    th:data-action="${h.ma}" th:data-id="${capa.id}" th:text="${h.nhan}">Hành động</button>
+          </div>
+          <p class="empty" th:if="${hanhDong.isEmpty()}">CAPA đã ở trạng thái cuối.</p>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>Lịch sử</h2>
+        <div class="body">
+          <ul class="timeline">
+            <li th:each="a : ${audit}">
+              <div class="act" th:text="${a.hanhDong}">—</div>
+              <div class="muted" th:text="(${a.giaTriCu} ?: '') + (${a.giaTriMoi != null} ? ' → ' + ${a.giaTriMoi} : '') + (${a.lyDo != null} ? ' · ' + ${a.lyDo} : '')">—</div>
+              <div class="when" th:text="${a.nguoiThucHien} + ' · ' + ${#temporals.format(a.thucHienLuc,'dd/MM HH:mm')}">—</div>
+            </li>
+            <li th:if="${audit.isEmpty()}"><span class="muted">Chưa có lịch sử.</span></li>
+          </ul>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script th:inline="none">
+    function post(url, body, after){
+      fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) })
+        .then(function(r){ return r.json(); })
+        .then(function(res){ if(res.success){ (after||function(){location.reload();})(res); }
+          else { alert('Không thực hiện được: ' + (res.error ? res.error.message : 'lỗi')); } })
+        .catch(function(e){ alert('Lỗi mạng: '+e); });
+    }
+    document.querySelectorAll('button[data-action]').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        var a = btn.getAttribute('data-action');
+        var id = btn.getAttribute('data-id');
+        var actor = prompt('Người thực hiện:', 'qademo'); if(!actor) return;
+        var body = { actor: actor };
+        if(a==='to-investigating'){ body.keHoachDieuTra = prompt('Kế hoạch điều tra (để trống nếu NC Nhẹ):',''); }
+        if(a==='to-action-plan'){ body.rcaNoiDung=prompt('RCA:',''); body.nhomNguyenNhan=prompt('Nhóm nguyên nhân:',''); body.chiPhiDauTu=Number(prompt('Chi phí đầu tư:','0')); }
+        if(a==='to-processing'){ body.khacPhucTucThoi=prompt('Khắc phục tức thời:',''); body.nganTaiDien=prompt('Ngăn tái diễn:',''); }
+        if(a==='to-monitoring'){ body.xNgay=Number(prompt('X ngày:','30')); body.nLo=Number(prompt('N lô (0 nếu nhóm N=0):','0')); }
+        if(a==='postpone-reminder'){ body.soNgayDoiThem=Number(prompt('Dời thêm (ngày):','7')); body.lyDo=prompt('Lý do:',''); }
+        if(a==='confirm-effective'){ body.bienBanKiemTra=prompt('Biên bản kiểm tra (nếu N=0):',''); }
+        if(a==='mark-ineffective'){ body.lyDo=prompt('Lý do không hiệu quả:',''); }
+        if(a==='add-action'){
+          var lo=prompt('Loại (TUC_THOI/NGAN_TAI_DIEN):','NGAN_TAI_DIEN');
+          post('/api/v1/capa/'+id+'/actions', { actor:actor, loai:lo, moTa:prompt('Mô tả:',''), nguoiPhuTrach:prompt('Phụ trách:','sx'), deadline:prompt('Hạn (YYYY-MM-DD):','2026-12-31') });
+          return;
+        }
+        post('/api/v1/capa/'+id+'/'+a, body);
+      });
+    });
+    document.querySelectorAll('button[data-complete]').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        var aid = btn.getAttribute('data-complete');
+        var actor = prompt('Người thực hiện:','sx'); if(!actor) return;
+        post('/api/v1/capa/actions/'+aid+'/complete', { actor:actor, bangChung:prompt('Bằng chứng:','') });
+      });
+    });
+  </script>
+</body>
+</html>

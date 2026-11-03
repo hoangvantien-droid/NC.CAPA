@@ -102,6 +102,18 @@
         </div>
       </section>
 
+      <section class="panel" th:if="${!capas.isEmpty()}">
+        <h2>CAPA liên kết</h2>
+        <div class="body">
+          <ul style="list-style:none;margin:0;padding:0">
+            <li th:each="c : ${capas}" style="padding:8px 0;border-bottom:1px solid var(--line)">
+              <a th:href="@{/capa/{id}(id=${c.id})}">CAPA#<span th:text="${c.id}">0</span></a>
+              <span class="pill st" th:text="${c.trangThai}" style="margin-left:8px">—</span>
+            </li>
+          </ul>
+        </div>
+      </section>
+
       <section class="panel">
         <h2>Lịch sử</h2>
         <div class="body">
@@ -131,6 +143,7 @@
         var body = { actor: actor };
         if(action==='escalate'){ body.mucMoi = prompt('Mức mới (NANG/NGHIEM_TRONG):','NANG'); body.lyDo = prompt('Lý do:',''); }
         if(action==='reject'){ body.lyDo = prompt('Lý do từ chối:',''); }
+        if(action==='cancel'){ body.lyDo = prompt('Lý do hủy phiếu:',''); }
         if(action==='close-fast'){ body.ketQuaXuLy = prompt('Kết quả xử lý:',''); }
         if(action==='confirm-done'){ body.bangChung = prompt('Bằng chứng:',''); body.chiPhiThucTe = Number(prompt('Chi phí thực tế:','0')); }
         if(action==='verify-close'){ body.ketLuanThamTra = prompt('Kết luận thẩm tra:',''); }
@@ -143,7 +156,10 @@
         fetch('/api/v1/nc/'+encodeURIComponent(so)+'/'+action, {
           method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)
         }).then(function(r){ return r.json(); }).then(function(res){
-          if(res.success){ location.reload(); }
+          if(res.success){
+            if(action==='capa' && res.data && res.data.id){ location.href='/capa/'+res.data.id; }
+            else { location.reload(); }
+          }
           else { alert('Không thực hiện được: ' + (res.error ? res.error.message : 'lỗi')); }
         }).catch(function(e){ alert('Lỗi mạng: '+e); });
       });
