@@ -26,7 +26,7 @@ $env:DB_URL="jdbc:mysql://localhost:3306/nc_capa?useSSL=false&serverTimezone=Asi
 $env:DB_USER="nc_capa"; $env:DB_PASS="nc_capa"
 ```
 - Swagger UI: http://localhost:8080/swagger-ui.html
-- Flyway tự migrate V1–V6 khi khởi động.
+- Flyway tự migrate toàn bộ (V1 trở đi) khi khởi động.
 
 ## Maven Wrapper
 Repo kèm `.mvn/wrapper/maven-wrapper.properties`. Nếu chưa có `mvnw`/`mvnw.cmd`, sinh bằng:
@@ -64,7 +64,22 @@ mvn test        # unit + integration (các IT cần Docker đang chạy cho Test
 - Seed demo: `DemoSeeder` (ApplicationRunner) nạp master data + bộ mã lỗi APPX + MES mô phỏng khi `app.seed.enabled=true`.
 - Test: thêm `EarlyFailTh2Test`, `TicketIngestTest`.
 
-Chưa làm (ngoài phạm vi app mẫu): seed từ file xlsx thật (hiện seed tay theo APPX), security/login thật, luồng PR/8D, callback ticket idempotent/retry thật.
+## Đã bổ sung sau Đợt a (các đợt b/c/d + hardening)
+- PR nhiều cấp (ma trận định tuyến theo `LoaiThayDoi`) + 8D (D0–D8).
+- Callback ticket 2 chiều có idempotency + retry + dead-letter (outbox) + scheduler flush.
+- Dashboard + báo cáo chuyên sâu: NC theo mức/trạng thái/nguồn/nhà máy, NC quá hạn, tỷ lệ CAPA hiệu quả, tuổi NC đang mở, thời gian đóng trung bình, cost-of-quality, top mã lỗi/mã hàng tái diễn.
+- RCA cấu trúc (FIVE_WHY/FISHBONE/IS_IS_NOT) + nhóm nguyên nhân 6M + cờ tái diễn + kế hoạch điều tra tách 3 trường.
+- Loại hành động CAPA Corrective/Preventive.
+- Upload file đính kèm (lưu local `uploads/`) + whitelist content-type + sniff magic-number + giới hạn tổng dung lượng.
+- Tự động mở PR khi CAPA Ineffective/fail lần 2/trần Nghiêm trọng, và khi NC tái diễn lần 3 trong cửa sổ 90 ngày (idempotent, chống trùng 1 PR/vấn đề).
+- SoD theo role thật (tra `app_user_role`): duyệt PR và duyệt disposition NC xác minh vai trò thật thay vì tin client khai; dời hạn mốc kiểm chứng NC Nặng+ chỉ QA tập đoàn.
+- Scope theo nhà máy: danh sách NC lọc theo nhà máy của người dùng; duyệt NC chặn thao tác xuyên nhà máy (QA tập đoàn toàn quyền).
+- Nút chuyển tài khoản demo (giả lập user hiện tại trong session, không login thật).
+- Seed demo: gán `app_user_role` + phiếu NC/CAPA/PR mẫu đủ trạng thái (tắt ở profile test).
+- Docker (Dockerfile + docker-compose) + CI GitHub Actions (`mvn -B -ntp clean test`).
+- Hệ thống thông báo (outbox): nhắc mốc kiểm chứng CAPA sắp/đến hạn + cảnh báo action CAPA quá hạn; lưu bảng `notification` (PENDING→SENT) + log mô phỏng gửi email (chỗ cắm SMTP sau), có scheduler quét/flush định kỳ (tắt ở profile test).
+
+Chưa làm (ngoài phạm vi app mẫu hiện tại): Spring Security / login thật (hiện dùng cơ chế demo + SoD theo role ở tầng service); import master data từ file xlsx thật (hiện seed tay theo APPX); versioning bản ghi đã xác nhận (hiện audit log che phần lớn nhu cầu truy vết).
 
 ## Lưu ý verify
 Tài liệu code được viết cho JDK 17; máy phát triển hiện tại là Java 8 nên **chưa build/test tại chỗ**. Cần JDK 17 + Maven (+ Docker cho IT) để `mvn test` xanh.

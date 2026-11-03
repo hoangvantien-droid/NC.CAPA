@@ -36,6 +36,11 @@ app:
   upload:
     dir: ${UPLOAD_DIR:uploads}          # thư mục lưu file đính kèm (Nhóm 2)
     max-total-bytes-per-object: ${UPLOAD_MAX_TOTAL_BYTES:52428800}  # tổng dung lượng tối đa/đối tượng (mặc định 50MB)
+  notification:
+    moc-canh-bao-truoc-ngay: 3          # cảnh báo mốc kiểm chứng CAPA "sắp đến" trước N ngày
+    scheduler:
+      enabled: true                     # bật scheduler quét sinh + flush thông báo
+      interval-ms: 60000                # chu kỳ quét + flush
 
 springdoc:
   swagger-ui:

@@ -15,6 +15,9 @@ app:
   ticket:
     scheduler:
       enabled: false      # test điều khiển flush thủ công (deterministic), tắt scheduler
+  notification:
+    scheduler:
+      enabled: false      # test gọi NotificationService trực tiếp, tắt scheduler (tránh flaky)
   sod:
     enabled: true
   capa:

@@ -14,6 +14,7 @@ public class AppProperties {
     private Sod sod = new Sod();
     private Ticket ticket = new Ticket();
     private Upload upload = new Upload();
+    private Notification notification = new Notification();
 
     public Seed getSeed() { return seed; }
     public void setSeed(Seed seed) { this.seed = seed; }
@@ -27,6 +28,8 @@ public class AppProperties {
     public void setTicket(Ticket ticket) { this.ticket = ticket; }
     public Upload getUpload() { return upload; }
     public void setUpload(Upload upload) { this.upload = upload; }
+    public Notification getNotification() { return notification; }
+    public void setNotification(Notification notification) { this.notification = notification; }
 
     public static class Seed {
         private boolean enabled = true;
@@ -68,6 +71,24 @@ public class AppProperties {
         public void setMaxRetry(int v) { this.maxRetry = v; }
         public int getRetryDelaySeconds() { return retryDelaySeconds; }
         public void setRetryDelaySeconds(int v) { this.retryDelaySeconds = v; }
+    }
+
+    public static class Notification {
+        /** Số ngày trước hạn kiểm chứng để cảnh báo "sắp đến" (mặc định 3). */
+        private int mocCanhBaoTruocNgay = 3;
+        private Scheduler scheduler = new Scheduler();
+        public int getMocCanhBaoTruocNgay() { return mocCanhBaoTruocNgay; }
+        public void setMocCanhBaoTruocNgay(int v) { this.mocCanhBaoTruocNgay = v; }
+        public Scheduler getScheduler() { return scheduler; }
+        public void setScheduler(Scheduler scheduler) { this.scheduler = scheduler; }
+        public static class Scheduler {
+            private boolean enabled = true;
+            private long intervalMs = 60000;
+            public boolean isEnabled() { return enabled; }
+            public void setEnabled(boolean enabled) { this.enabled = enabled; }
+            public long getIntervalMs() { return intervalMs; }
+            public void setIntervalMs(long v) { this.intervalMs = v; }
+        }
     }
 
     public static class Upload {
