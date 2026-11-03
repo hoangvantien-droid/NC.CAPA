@@ -115,6 +115,20 @@
       </section>
 
       <section class="panel">
+        <h2>File đính kèm</h2>
+        <div class="body">
+          <form id="att-form" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px">
+            <input type="file" id="att-file" required/>
+            <button class="btn" type="submit">Tải lên</button>
+          </form>
+          <ul id="att-list" th:data-so="${nc.soHieu}" style="list-style:none;margin:0;padding:0">
+            <li class="muted">Đang tải danh sách…</li>
+          </ul>
+          <p class="hint">Đính kèm bằng chứng cho phiếu NC (ảnh/biên bản). Tối đa 10MB mỗi file.</p>
+        </div>
+      </section>
+
+      <section class="panel">
         <h2>Lịch sử</h2>
         <div class="body">
           <ul class="timeline">
@@ -164,6 +178,62 @@
         }).catch(function(e){ alert('Lỗi mạng: '+e); });
       });
     });
+
+    // ---- File đính kèm (Nhóm 2) ----
+    (function(){
+      var listEl = document.getElementById('att-list');
+      var soHieu = listEl ? (listEl.getAttribute('data-so') || '') : '';
+      var formEl = document.getElementById('att-form');
+      var fileEl = document.getElementById('att-file');
+      if(!listEl || !formEl) return;
+
+      function loadList(){
+        var q = '?doiTuong=NC&doiTuongId=' + encodeURIComponent(soHieu);
+        fetch('/api/v1/attachment' + q).then(function(r){ return r.json(); }).then(function(res){
+          listEl.innerHTML = '';
+          var items = (res.success && res.data) ? res.data : [];
+          if(items.length === 0){
+            listEl.innerHTML = '<li class="muted">Chưa có file đính kèm.</li>';
+            return;
+          }
+          items.forEach(function(a){
+            var li = document.createElement('li');
+            li.style.cssText = 'padding:6px 0;border-bottom:1px solid var(--line)';
+            var link = document.createElement('a');
+            link.href = '/api/v1/attachment/' + a.id + '/download';
+            link.textContent = a.tenFile;
+            li.appendChild(link);
+            var meta = document.createElement('span');
+            meta.className = 'muted';
+            meta.style.marginLeft = '8px';
+            meta.textContent = Math.round((a.kichThuoc||0)/1024) + ' KB'
+              + (a.nguoiTai ? ' · ' + a.nguoiTai : '');
+            li.appendChild(meta);
+            listEl.appendChild(li);
+          });
+        }).catch(function(){ listEl.innerHTML = '<li class="muted">Không tải được danh sách.</li>'; });
+      }
+
+      formEl.addEventListener('submit', function(e){
+        e.preventDefault();
+        if(!fileEl.files || fileEl.files.length === 0){ alert('Chọn file trước.'); return; }
+        var actor = prompt('Người tải (username):', 'qademo');
+        if(!actor) return;
+        var fd = new FormData();
+        fd.append('doiTuong', 'NC');
+        fd.append('doiTuongId', soHieu);
+        fd.append('file', fileEl.files[0]);
+        fd.append('actor', actor);
+        fetch('/api/v1/attachment', { method:'POST', body: fd })
+          .then(function(r){ return r.json(); })
+          .then(function(res){
+            if(res.success){ fileEl.value=''; loadList(); }
+            else { alert('Không tải được: ' + (res.error ? res.error.message : 'lỗi')); }
+          }).catch(function(e){ alert('Lỗi mạng: '+e); });
+      });
+
+      loadList();
+    })();
   </script>
 </body>
 </html>

@@ -1,5 +1,6 @@
 package com.dqh.nccapa.capa.dto;
 
+import com.dqh.nccapa.common.enums.ActionCategory;
 import com.dqh.nccapa.common.enums.ActionType;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -12,4 +13,6 @@ public class AddActionRequest {
     @NotBlank public String nguoiPhuTrach;
     @NotNull  public LocalDate deadline;
     @NotBlank public String actor;
+    /** CORRECTIVE | PREVENTIVE — tuỳ chọn, null coi như CORRECTIVE. */
+    public ActionCategory loaiHanhDong;
 }

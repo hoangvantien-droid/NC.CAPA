@@ -59,10 +59,11 @@
         <h2>Action con</h2>
         <div class="body">
           <table>
-            <thead><tr><th>Loại</th><th>Mô tả</th><th>Phụ trách</th><th>Hạn</th><th>Trạng thái</th></tr></thead>
+            <thead><tr><th>Loại</th><th>Loại HĐ</th><th>Mô tả</th><th>Phụ trách</th><th>Hạn</th><th>Trạng thái</th><th>File</th></tr></thead>
             <tbody>
               <tr th:each="a : ${actions}">
                 <td class="muted" th:text="${a.loai}">—</td>
+                <td class="muted" th:text="${a.loaiHanhDong}">—</td>
                 <td th:text="${a.moTa} ?: '—'" style="max-width:220px">—</td>
                 <td class="muted" th:text="${a.nguoiPhuTrach}">—</td>
                 <td class="muted" th:text="${a.deadline}">—</td>
@@ -70,8 +71,10 @@
                   <button th:if="${a.trangThai.name() != 'Completed'}" class="btn"
                           style="padding:2px 8px;font-size:12px;margin-left:6px"
                           th:data-complete="${a.id}">Hoàn thành</button></td>
+                <td><button class="btn" style="padding:2px 8px;font-size:12px"
+                            th:data-att-action="${a.id}">Đính kèm</button></td>
               </tr>
-              <tr th:if="${actions.isEmpty()}"><td colspan="5" class="empty">Chưa có action.</td></tr>
+              <tr th:if="${actions.isEmpty()}"><td colspan="7" class="empty">Chưa có action.</td></tr>
             </tbody>
           </table>
         </div>
@@ -157,7 +160,8 @@
         if(a==='mark-ineffective'){ body.lyDo=prompt('Lý do không hiệu quả:',''); }
         if(a==='add-action'){
           var lo=prompt('Loại (TUC_THOI/NGAN_TAI_DIEN):','NGAN_TAI_DIEN');
-          post('/api/v1/capa/'+id+'/actions', { actor:actor, loai:lo, moTa:prompt('Mô tả:',''), nguoiPhuTrach:prompt('Phụ trách:','sx'), deadline:prompt('Hạn (YYYY-MM-DD):','2026-12-31') });
+          var cat=prompt('Loại hành động (CORRECTIVE/PREVENTIVE):','CORRECTIVE');
+          post('/api/v1/capa/'+id+'/actions', { actor:actor, loai:lo, loaiHanhDong:cat, moTa:prompt('Mô tả:',''), nguoiPhuTrach:prompt('Phụ trách:','sx'), deadline:prompt('Hạn (YYYY-MM-DD):','2026-12-31') });
           return;
         }
         post('/api/v1/capa/'+id+'/'+a, body);
@@ -168,6 +172,35 @@
         var aid = btn.getAttribute('data-complete');
         var actor = prompt('Người thực hiện:','sx'); if(!actor) return;
         post('/api/v1/capa/actions/'+aid+'/complete', { actor:actor, bangChung:prompt('Bằng chứng:','') });
+      });
+    });
+    // Đính kèm file cho action (Nhóm 2): liệt kê + upload nhanh.
+    document.querySelectorAll('button[data-att-action]').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        var aid = btn.getAttribute('data-att-action');
+        var q = '?doiTuong=ACTION&doiTuongId=' + encodeURIComponent(aid);
+        fetch('/api/v1/attachment' + q).then(function(r){ return r.json(); }).then(function(res){
+          var items = (res.success && res.data) ? res.data : [];
+          var ds = items.map(function(x){ return '• ' + x.tenFile + '  (' + window.location.origin + '/api/v1/attachment/' + x.id + '/download)'; }).join('\n');
+          alert('File của action #' + aid + ':\n' + (ds || '(chưa có)'));
+          if(!confirm('Tải lên file mới cho action #' + aid + '?')) return;
+          var input = document.createElement('input');
+          input.type = 'file';
+          input.onchange = function(){
+            if(!input.files || input.files.length === 0) return;
+            var actor = prompt('Người tải:', 'qademo'); if(!actor) return;
+            var fd = new FormData();
+            fd.append('doiTuong', 'ACTION');
+            fd.append('doiTuongId', aid);
+            fd.append('file', input.files[0]);
+            fd.append('actor', actor);
+            fetch('/api/v1/attachment', { method:'POST', body: fd })
+              .then(function(r){ return r.json(); })
+              .then(function(r){ if(r.success){ alert('Đã tải lên.'); } else { alert('Không tải được: ' + (r.error ? r.error.message : 'lỗi')); } })
+              .catch(function(e){ alert('Lỗi mạng: '+e); });
+          };
+          input.click();
+        }).catch(function(e){ alert('Lỗi mạng: '+e); });
       });
     });
   </script>

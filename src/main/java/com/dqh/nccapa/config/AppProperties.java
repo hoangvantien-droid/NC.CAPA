@@ -13,6 +13,7 @@ public class AppProperties {
     private Nc nc = new Nc();
     private Sod sod = new Sod();
     private Ticket ticket = new Ticket();
+    private Upload upload = new Upload();
 
     public Seed getSeed() { return seed; }
     public void setSeed(Seed seed) { this.seed = seed; }
@@ -24,6 +25,8 @@ public class AppProperties {
     public void setSod(Sod sod) { this.sod = sod; }
     public Ticket getTicket() { return ticket; }
     public void setTicket(Ticket ticket) { this.ticket = ticket; }
+    public Upload getUpload() { return upload; }
+    public void setUpload(Upload upload) { this.upload = upload; }
 
     public static class Seed {
         private boolean enabled = true;
@@ -65,5 +68,12 @@ public class AppProperties {
         public void setMaxRetry(int v) { this.maxRetry = v; }
         public int getRetryDelaySeconds() { return retryDelaySeconds; }
         public void setRetryDelaySeconds(int v) { this.retryDelaySeconds = v; }
+    }
+
+    public static class Upload {
+        /** Thư mục lưu file đính kèm trên disk (Nhóm 2). */
+        private String dir = "uploads";
+        public String getDir() { return dir; }
+        public void setDir(String dir) { this.dir = dir; }
     }
 }

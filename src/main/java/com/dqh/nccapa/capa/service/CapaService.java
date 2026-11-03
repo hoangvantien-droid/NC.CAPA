@@ -169,10 +169,13 @@ public class CapaService {
         if (capa.getTrangThai() != CapaStatus.ActionPlan && capa.getTrangThai() != CapaStatus.Processing) {
             throw BusinessException.guard("Chỉ thêm action ở ActionPlan/Processing");
         }
-        CapaAction a = actionRepo.save(
-                new CapaAction(capaId, req.loai, req.moTa, req.nguoiPhuTrach, req.deadline));
+        CapaAction action = new CapaAction(capaId, req.loai, req.moTa, req.nguoiPhuTrach, req.deadline);
+        action.setLoaiHanhDong(req.loaiHanhDong != null
+                ? req.loaiHanhDong
+                : com.dqh.nccapa.common.enums.ActionCategory.CORRECTIVE);
+        CapaAction a = actionRepo.save(action);
         audit.log("ACTION", String.valueOf(a.getId()), "THEM_ACTION", null, req.loai.name(),
-                "capa " + capaId, req.actor);
+                "capa " + capaId + " · " + a.getLoaiHanhDong().name(), req.actor);
         return a;
     }
 

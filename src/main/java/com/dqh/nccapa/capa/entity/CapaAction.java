@@ -1,5 +1,6 @@
 package com.dqh.nccapa.capa.entity;
 
+import com.dqh.nccapa.common.enums.ActionCategory;
 import com.dqh.nccapa.common.enums.ActionStatus;
 import com.dqh.nccapa.common.enums.ActionType;
 import jakarta.persistence.*;
@@ -41,6 +42,11 @@ public class CapaAction {
     @Column(name = "bang_chung", length = 255)
     private String bangChung;
 
+    @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
+    @Column(name = "loai_hanh_dong", nullable = false, length = 16)
+    private ActionCategory loaiHanhDong;
+
     protected CapaAction() { }
 
     public CapaAction(Long capaId, ActionType loai, String moTa, String nguoiPhuTrach, LocalDate deadline) {
@@ -50,6 +56,7 @@ public class CapaAction {
         this.nguoiPhuTrach = nguoiPhuTrach;
         this.deadline = deadline;
         this.trangThai = ActionStatus.Open;
+        this.loaiHanhDong = ActionCategory.CORRECTIVE;
     }
 
     public Long getId() { return id; }
@@ -57,8 +64,10 @@ public class CapaAction {
     public ActionType getLoai() { return loai; }
     public LocalDate getDeadline() { return deadline; }
     public ActionStatus getTrangThai() { return trangThai; }
+    public ActionCategory getLoaiHanhDong() { return loaiHanhDong; }
 
     public void setDeadline(LocalDate v) { this.deadline = v; }
     public void setTrangThai(ActionStatus v) { this.trangThai = v; }
     public void setBangChung(String v) { this.bangChung = v; }
+    public void setLoaiHanhDong(ActionCategory v) { this.loaiHanhDong = v; }
 }
