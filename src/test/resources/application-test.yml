@@ -1,0 +1,21 @@
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQLDialect
+    open-in-view: false
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+app:
+  seed:
+    enabled: false        # test tự nạp dữ liệu cần thiết, không seed demo
+  sod:
+    enabled: true
+  capa:
+    reminder:
+      max-postpone: 2
+  nc:
+    recurrence-window-days: 90

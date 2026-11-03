@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>NC/CAPA — Danh sách không phù hợp</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="/css/app.css"/>
+</head>
+<body>
+  <header class="topbar">
+    <span class="brand">QLone<span class="sep">·</span>NC/CAPA</span>
+    <span class="spacer"></span>
+    <a class="btn btn-primary" th:href="@{/nc/tao}">+ Tạo NC</a>
+  </header>
+
+  <section class="statusbar">
+    <div class="stat"><span class="num" th:text="${dangMo}">0</span><span class="lbl">Phiếu đang mở</span></div>
+    <div class="stat crit"><span class="num" th:text="${nghiemTrong}">0</span><span class="lbl">Nghiêm trọng đang mở</span></div>
+    <div class="stat warn"><span class="num" th:text="${khoanhVung}">0</span><span class="lbl">Đang khoanh vùng</span></div>
+  </section>
+
+  <p class="foodsafe" th:if="${khoanhVung > 0}">
+    <span class="dot"></span>
+    <span><span th:text="${khoanhVung}">0</span> phiếu đang khoanh vùng — cần xử lý lô vật lý trước khi đóng.</span>
+  </p>
+
+  <main class="wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Số hiệu</th><th>Mức</th><th>Trạng thái</th>
+          <th>Loại</th><th>Nguồn</th><th>Lô kiểm</th><th>Nhà máy</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr th:each="n : ${dsNc}">
+          <td class="id"><a th:href="@{/nc/{s}(s=${n.soHieu})}" th:text="${n.soHieu}">KPH</a></td>
+          <td><span class="pill" th:classappend="'sev-' + ${n.mucNghiemTrong}"
+                    th:text="${n.mucNghiemTrong == T(com.dqh.nccapa.common.enums.Severity).NHE} ? 'Nhẹ'
+                           : (${n.mucNghiemTrong == T(com.dqh.nccapa.common.enums.Severity).NANG} ? 'Nặng' : 'Nghiêm trọng')">—</span></td>
+          <td><span class="pill st" th:classappend="'st-' + ${n.trangThai}" th:text="${n.trangThai}">—</span></td>
+          <td class="muted" th:text="${n.loaiNc}">—</td>
+          <td class="muted" th:text="${n.nguonPhatSinh}">—</td>
+          <td class="id muted" th:text="${n.loKiem} ?: '—'">—</td>
+          <td class="muted" th:text="${n.nhaMay}">—</td>
+        </tr>
+        <tr th:if="${dsNc.isEmpty()}">
+          <td colspan="7" class="empty">Chưa có phiếu NC. Tạo phiếu đầu tiên để bắt đầu.</td>
+        </tr>
+      </tbody>
+    </table>
+  </main>
+</body>
+</html>

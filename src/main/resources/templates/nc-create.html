@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Tạo NC — NC/CAPA</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="/css/app.css"/>
+</head>
+<body>
+  <header class="topbar">
+    <span class="brand">QLone<span class="sep">·</span>NC/CAPA</span>
+    <span class="spacer"></span>
+    <a class="btn" th:href="@{/}">Danh sách</a>
+  </header>
+
+  <p class="crumb"><a th:href="@{/}">Danh sách</a> / Tạo phiếu</p>
+
+  <form class="form" id="f">
+    <div class="field">
+      <label for="loaiNc">Loại NC</label>
+      <select id="loaiNc">
+        <option>THANH_PHAM</option><option>TRONG_SX</option><option>NVL</option>
+        <option>MOI_TRUONG</option><option>THIET_BI_DO</option><option>KHIEU_NAI</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="nhaMay">Nhà máy</label>
+      <input id="nhaMay" value="MGP"/>
+    </div>
+    <div class="field">
+      <label for="nguoiBaoCao">Người báo cáo</label>
+      <input id="nguoiBaoCao" value="qademo"/>
+    </div>
+    <div class="field">
+      <label for="loKiem">Lô kiểm</label>
+      <input id="loKiem" placeholder="LOT-2026-00001"/>
+    </div>
+    <div class="field">
+      <label for="maLoiId">Mã lỗi (chỉ tiêu vi phạm)</label>
+      <input id="maLoiId" placeholder="FG-03"/>
+      <p class="hint">Mức nghiêm trọng và luồng xử lý được hệ thống xác định tự động theo bộ mã lỗi.
+         Ví dụ (dữ liệu demo): FG-01 Nhẹ · PRC-02 Nặng · FG-03 Nghiêm trọng (khoanh vùng).</p>
+    </div>
+    <div class="field">
+      <label for="maHang">Mã hàng</label>
+      <input id="maHang" value="SP001"/>
+    </div>
+    <div class="field">
+      <label for="moTaLoi">Mô tả lỗi</label>
+      <textarea id="moTaLoi" placeholder="Mô tả ngắn hiện tượng không phù hợp"></textarea>
+    </div>
+    <button type="submit" class="btn btn-primary">Tạo phiếu NC</button>
+    <p class="hint" id="err" style="color:var(--hold);display:none"></p>
+  </form>
+
+  <script th:inline="none">
+    document.getElementById('f').addEventListener('submit', function(e){
+      e.preventDefault();
+      var g = function(id){ return document.getElementById(id).value; };
+      var body = {
+        loaiNc: g('loaiNc'), nguonPhatSinh: 'THU_CONG',
+        nhaMay: g('nhaMay'), nguoiBaoCao: g('nguoiBaoCao'),
+        loKiem: g('loKiem') || null, moTaLoi: g('moTaLoi') || null,
+        chiTieu: [ { maLoiId: g('maLoiId'), maHang: g('maHang') || null } ]
+      };
+      fetch('/api/v1/nc', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) })
+        .then(function(r){ return r.json(); })
+        .then(function(res){
+          if(res.success){ location.href = '/nc/' + encodeURIComponent(res.data.soHieu); }
+          else {
+            var el = document.getElementById('err');
+            el.style.display='block';
+            el.textContent = 'Không tạo được: ' + (res.error ? res.error.message : 'lỗi');
+          }
+        }).catch(function(err){
+          var el = document.getElementById('err'); el.style.display='block'; el.textContent='Lỗi mạng: '+err;
+        });
+    });
+  </script>
+</body>
+</html>

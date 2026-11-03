@@ -1,0 +1,51 @@
+CREATE TABLE nha_may (
+  ma  VARCHAR(16) PRIMARY KEY,
+  ten VARCHAR(255) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE ncc (
+  ma VARCHAR(32) PRIMARY KEY,
+  ten VARCHAR(255) NOT NULL,
+  co_giay_cn TINYINT(1) NOT NULL DEFAULT 0,
+  cn_het_han_ngay DATE NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE ma_hang (
+  ma VARCHAR(32) PRIMARY KEY,
+  ten VARCHAR(255) NOT NULL,
+  nha_may VARCHAR(16) NOT NULL,
+  CONSTRAINT fk_mahang_nhamay FOREIGN KEY (nha_may) REFERENCES nha_may(ma)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE lo (
+  so_lo VARCHAR(64) PRIMARY KEY,
+  ma_hang VARCHAR(32) NOT NULL,
+  nha_may VARCHAR(16) NOT NULL,
+  ngay_sx DATE NULL,
+  trang_thai_lo VARCHAR(16) NOT NULL DEFAULT 'Available',
+  CONSTRAINT fk_lo_mahang FOREIGN KEY (ma_hang) REFERENCES ma_hang(ma),
+  CONSTRAINT fk_lo_nhamay FOREIGN KEY (nha_may) REFERENCES nha_may(ma)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE role (
+  ma VARCHAR(32) PRIMARY KEY,
+  ten VARCHAR(255) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE app_user (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  username VARCHAR(64) NOT NULL UNIQUE,
+  full_name VARCHAR(255) NOT NULL,
+  nha_may VARCHAR(16) NULL,
+  active TINYINT(1) NOT NULL DEFAULT 1,
+  delegate_to_user_id BIGINT NULL,
+  CONSTRAINT fk_user_nhamay FOREIGN KEY (nha_may) REFERENCES nha_may(ma)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE app_user_role (
+  user_id BIGINT NOT NULL,
+  role_ma VARCHAR(32) NOT NULL,
+  PRIMARY KEY (user_id, role_ma),
+  CONSTRAINT fk_ur_user FOREIGN KEY (user_id) REFERENCES app_user(id),
+  CONSTRAINT fk_ur_role FOREIGN KEY (role_ma) REFERENCES role(ma)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

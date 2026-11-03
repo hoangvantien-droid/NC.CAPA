@@ -1,0 +1,120 @@
+/* NC/CAPA — bảng công cụ QA nhà máy thực phẩm.
+   Màu lấy từ ngôn ngữ kiểm định: xanh lục kiểm nghiệm + cam Hold cảnh báo. */
+:root{
+  --ink:#15201C;
+  --paper:#FBFDFB;
+  --line:#D7E0DA;
+  --muted:#5B6B63;
+  --seal:#1F6F54;      /* xanh kiểm định — nút chính, mức Nhẹ/đạt */
+  --seal-weak:#E7F0EB;
+  --amber:#B45309;     /* Nặng / quá hạn */
+  --amber-weak:#F7ECDC;
+  --hold:#C2410C;      /* Nghiêm trọng / Hold — chỉ cảnh báo thật */
+  --hold-weak:#FBE6DC;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  --sans:"Inter",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0;font-family:var(--sans);color:var(--ink);background:var(--paper);
+  font-size:15px;line-height:1.5;
+}
+a{color:var(--seal);text-decoration:none}
+a:hover{text-decoration:underline}
+
+/* Thanh trên */
+.topbar{
+  display:flex;align-items:center;gap:16px;
+  padding:14px 24px;border-bottom:1px solid var(--line);
+}
+.brand{font-weight:600;letter-spacing:.2px}
+.brand .sep{color:var(--line);margin:0 8px}
+.topbar .spacer{flex:1}
+.select,.btn{
+  font:inherit;border:1px solid var(--line);background:#fff;color:var(--ink);
+  padding:8px 12px;border-radius:7px;cursor:pointer;
+}
+.btn-primary{background:var(--seal);border-color:var(--seal);color:#fff;font-weight:500}
+.btn-primary:hover{background:#185B45}
+.btn:hover{border-color:var(--muted)}
+
+/* Thanh trạng thái (hero vận hành) */
+.statusbar{
+  display:flex;align-items:baseline;gap:32px;flex-wrap:wrap;
+  padding:20px 24px;border-bottom:1px solid var(--line);
+}
+.stat .num{font-family:var(--mono);font-size:30px;font-weight:600;line-height:1}
+.stat .lbl{display:block;color:var(--muted);font-size:13px;margin-top:4px}
+.stat.crit .num{color:var(--hold)}
+.stat.warn .num{color:var(--amber)}
+
+/* Dải cảnh báo an toàn thực phẩm — điểm nhấn duy nhất */
+.foodsafe{
+  margin:0;padding:12px 24px;background:var(--hold-weak);
+  border-bottom:1px solid var(--hold);color:#7A2708;font-weight:500;
+  display:flex;align-items:center;gap:10px;
+}
+.foodsafe .dot{width:9px;height:9px;border-radius:50%;background:var(--hold);flex:none}
+
+/* Bảng */
+.wrap{padding:8px 24px 48px}
+table{width:100%;border-collapse:collapse;margin-top:8px}
+thead th{
+  text-align:left;font-size:12.5px;font-weight:600;color:var(--muted);
+  padding:10px 12px;border-bottom:1px solid var(--line);white-space:nowrap;
+}
+tbody td{padding:12px;border-bottom:1px solid var(--line);vertical-align:middle}
+tbody tr:hover{background:var(--seal-weak)}
+.id{font-family:var(--mono);font-size:13.5px}
+.muted{color:var(--muted)}
+.overdue{color:var(--hold);font-weight:500}
+
+/* Pill mức & trạng thái — màu mã hóa thông tin */
+.pill{display:inline-block;padding:2px 9px;border-radius:999px;font-size:12.5px;font-weight:500;border:1px solid transparent;white-space:nowrap}
+.sev-NHE{background:var(--seal-weak);color:var(--seal);border-color:#BFDbCB}
+.sev-NANG{background:var(--amber-weak);color:var(--amber);border-color:#E7CBA0}
+.sev-NGHIEM_TRONG{background:var(--hold-weak);color:var(--hold);border-color:#EEB69C}
+.st{background:#EEF2EF;color:#394640;border:1px solid var(--line)}
+.st-Containment{background:var(--hold-weak);color:var(--hold);border-color:#EEB69C}
+.st-Closed{background:#EAF0ED;color:var(--muted)}
+.st-Cancelled{background:#F0EEEE;color:var(--muted)}
+
+/* Chi tiết: 2 cột */
+.detail{display:grid;grid-template-columns:1fr 340px;gap:32px;padding:20px 24px 48px;align-items:start}
+.panel{border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.panel h2{margin:0;padding:12px 16px;font-size:13px;font-weight:600;color:var(--muted);border-bottom:1px solid var(--line);background:#F4F8F5}
+.panel .body{padding:16px}
+dl.kv{display:grid;grid-template-columns:150px 1fr;gap:8px 16px;margin:0}
+dl.kv dt{color:var(--muted);font-size:13.5px}
+dl.kv dd{margin:0}
+.crumb{padding:16px 24px 0;font-size:13.5px}
+
+/* Dòng thời gian audit */
+.timeline{list-style:none;margin:0;padding:0}
+.timeline li{padding:10px 0;border-bottom:1px dashed var(--line);font-size:13.5px}
+.timeline li:last-child{border-bottom:0}
+.timeline .act{font-weight:500}
+.timeline .when{color:var(--muted);font-size:12.5px}
+
+/* Nút hành động */
+.actions{display:flex;flex-direction:column;gap:8px}
+.actions .btn{text-align:left}
+.actions .btn.danger{border-color:#EEB69C;color:var(--hold)}
+
+/* Form */
+.form{max-width:680px;padding:20px 24px 48px}
+.field{margin-bottom:16px}
+.field label{display:block;font-size:13.5px;color:var(--muted);margin-bottom:6px}
+.field input,.field select,.field textarea{
+  width:100%;font:inherit;padding:9px 11px;border:1px solid var(--line);border-radius:7px;background:#fff;color:var(--ink);
+}
+.field textarea{min-height:72px;resize:vertical}
+.hint{font-size:12.5px;color:var(--muted);margin-top:4px}
+.empty{color:var(--muted);padding:24px 12px;text-align:center}
+
+@media (max-width:780px){
+  .detail{grid-template-columns:1fr}
+  .statusbar{gap:20px}
+}

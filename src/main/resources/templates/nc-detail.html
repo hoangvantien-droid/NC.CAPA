@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title th:text="${nc.soHieu} + ' — NC/CAPA'">Chi tiết NC</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="/css/app.css"/>
+</head>
+<body>
+  <header class="topbar">
+    <span class="brand">QLone<span class="sep">·</span>NC/CAPA</span>
+    <span class="spacer"></span>
+    <a class="btn" th:href="@{/}">Danh sách</a>
+  </header>
+
+  <p class="crumb"><a th:href="@{/}">Danh sách</a> / <span class="id" th:text="${nc.soHieu}">KPH</span></p>
+
+  <p class="foodsafe" th:if="${nc.trangThai.name() == 'Containment'}">
+    <span class="dot"></span>
+    <span>Phiếu đang khoanh vùng. Gỡ khoanh từng dòng lô trong bước Xử lý; chỉ đóng khi mọi lô có trạng thái cuối.</span>
+  </p>
+
+  <div class="detail">
+    <div style="display:flex;flex-direction:column;gap:24px">
+      <!-- Thông tin -->
+      <section class="panel">
+        <h2>Thông tin phiếu</h2>
+        <div class="body">
+          <div style="display:flex;gap:10px;align-items:center;margin-bottom:16px">
+            <span class="id" style="font-size:17px;font-weight:600" th:text="${nc.soHieu}">KPH</span>
+            <span class="pill" th:classappend="'sev-' + ${nc.mucNghiemTrong}"
+                  th:text="${nc.mucNghiemTrong == T(com.dqh.nccapa.common.enums.Severity).NHE} ? 'Nhẹ'
+                         : (${nc.mucNghiemTrong == T(com.dqh.nccapa.common.enums.Severity).NANG} ? 'Nặng' : 'Nghiêm trọng')">—</span>
+            <span class="pill st" th:classappend="'st-' + ${nc.trangThai}" th:text="${nc.trangThai}">—</span>
+          </div>
+          <dl class="kv">
+            <dt>Loại NC</dt><dd th:text="${nc.loaiNc}">—</dd>
+            <dt>Nguồn phát sinh</dt><dd th:text="${nc.nguonPhatSinh}">—</dd>
+            <dt>Nhà máy</dt><dd th:text="${nc.nhaMay}">—</dd>
+            <dt>Lô kiểm</dt><dd class="id" th:text="${nc.loKiem} ?: '—'">—</dd>
+            <dt>Mã hàng chính</dt><dd class="id" th:text="${nc.maHangChinh} ?: '—'">—</dd>
+            <dt>Mã lỗi chính</dt><dd class="id" th:text="${nc.maLoiChinh} ?: '—'">—</dd>
+            <dt>An toàn TP</dt><dd th:text="${nc.foodSafety} ? 'Có' : 'Không'">—</dd>
+            <dt>Chi phí thực tế</dt><dd th:text="${nc.chiPhiThucTe} ?: '—'">—</dd>
+          </dl>
+        </div>
+      </section>
+
+      <!-- Chỉ tiêu vi phạm -->
+      <section class="panel">
+        <h2>Chỉ tiêu vi phạm</h2>
+        <div class="body">
+          <table>
+            <thead><tr><th>Mã lỗi</th><th>Mã hàng</th><th>OOS</th><th>Nguồn</th></tr></thead>
+            <tbody>
+              <tr th:each="c : ${chiTieu}">
+                <td class="id" th:text="${c.maLoiId}">—</td>
+                <td class="id muted" th:text="${c.maHang} ?: '—'">—</td>
+                <td th:text="${c.inOutSpec == 2} ? 'OOS' : '—'">—</td>
+                <td class="muted" th:text="${c.nguonSuKien} ?: '—'">—</td>
+              </tr>
+              <tr th:if="${chiTieu.isEmpty()}"><td colspan="4" class="empty">Chưa có chỉ tiêu.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Đối tượng ảnh hưởng -->
+      <section class="panel" th:if="${!doiTuong.isEmpty()}">
+        <h2>Đối tượng ảnh hưởng</h2>
+        <div class="body">
+          <table>
+            <thead><tr><th>Loại</th><th>Giá trị</th><th>Khoanh vùng</th><th>Trạng thái lô</th></tr></thead>
+            <tbody>
+              <tr th:each="d : ${doiTuong}">
+                <td class="muted" th:text="${d.loaiDoiTuong}">—</td>
+                <td class="id" th:text="${d.giaTri}">—</td>
+                <td th:text="${d.khoanhVung} ? 'Có' : '—'">—</td>
+                <td th:text="${d.trangThaiDongLo} ?: '—'">—</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+
+    <!-- Cột phải: hành động + dòng thời gian -->
+    <div style="display:flex;flex-direction:column;gap:24px">
+      <section class="panel">
+        <h2>Bước kế tiếp</h2>
+        <div class="body">
+          <div class="actions" th:if="${!hanhDong.isEmpty()}">
+            <button class="btn" th:each="h : ${hanhDong}"
+                    th:classappend="${h.ma == 'reject' || h.ma == 'cancel'} ? 'danger' : ''"
+                    th:data-action="${h.ma}" th:data-so="${nc.soHieu}"
+                    th:text="${h.nhan}">Hành động</button>
+          </div>
+          <p class="empty" th:if="${hanhDong.isEmpty()}">Phiếu đã ở trạng thái cuối.</p>
+          <p class="hint">Thao tác gọi API nghiệp vụ; nếu không đủ điều kiện (guard) hệ thống sẽ báo lý do.</p>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>Lịch sử</h2>
+        <div class="body">
+          <ul class="timeline">
+            <li th:each="a : ${audit}">
+              <div class="act" th:text="${a.hanhDong}">—</div>
+              <div class="muted"
+                   th:text="(${a.giaTriCu} ?: '') + (${a.giaTriMoi != null} ? ' → ' + ${a.giaTriMoi} : '')
+                            + (${a.lyDo != null} ? ' · ' + ${a.lyDo} : '')">—</div>
+              <div class="when" th:text="${a.nguoiThucHien} + ' · ' + ${#temporals.format(a.thucHienLuc,'dd/MM HH:mm')}">—</div>
+            </li>
+            <li th:if="${audit.isEmpty()}"><span class="muted">Chưa có lịch sử.</span></li>
+          </ul>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script th:inline="none">
+    // Gọi API nghiệp vụ. Các field (actor/lý do/chi phí) nhập nhanh qua prompt cho demo.
+    document.querySelectorAll('button[data-action]').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        var action = btn.getAttribute('data-action');
+        var so = btn.getAttribute('data-so');
+        var actor = prompt('Người thực hiện (username):', 'qademo');
+        if(!actor) return;
+        var body = { actor: actor };
+        if(action==='escalate'){ body.mucMoi = prompt('Mức mới (NANG/NGHIEM_TRONG):','NANG'); body.lyDo = prompt('Lý do:',''); }
+        if(action==='reject'){ body.lyDo = prompt('Lý do từ chối:',''); }
+        if(action==='close-fast'){ body.ketQuaXuLy = prompt('Kết quả xử lý:',''); }
+        if(action==='confirm-done'){ body.bangChung = prompt('Bằng chứng:',''); body.chiPhiThucTe = Number(prompt('Chi phí thực tế:','0')); }
+        if(action==='verify-close'){ body.ketLuanThamTra = prompt('Kết luận thẩm tra:',''); }
+        if(action==='submit-approval'){
+          body.nguyenNhanSoBo = prompt('Nguyên nhân sơ bộ:','');
+          body.dispositionDeXuat = prompt('Disposition (REWORK/RETURN_NCC/HA_CAP/TAI_CHE/TIEU_HUY):','REWORK');
+          body.chiPhiUocTinh = Number(prompt('Chi phí ước tính:','0'));
+          body.boPhanThucHien = prompt('Bộ phận thực hiện:','SX');
+        }
+        fetch('/api/v1/nc/'+encodeURIComponent(so)+'/'+action, {
+          method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)
+        }).then(function(r){ return r.json(); }).then(function(res){
+          if(res.success){ location.reload(); }
+          else { alert('Không thực hiện được: ' + (res.error ? res.error.message : 'lỗi')); }
+        }).catch(function(e){ alert('Lỗi mạng: '+e); });
+      });
+    });
+  </script>
+</body>
+</html>
