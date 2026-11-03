@@ -244,6 +244,8 @@ public class ReportExportService {
             return out.toByteArray();
         } catch (java.io.IOException e) {
             throw new UncheckedIOException("Lỗi dựng file PDF báo cáo", e);
+        } catch (com.lowagie.text.DocumentException e) {
+            throw new IllegalStateException("Lỗi dựng file PDF báo cáo", e);
         }
     }
 
