@@ -78,8 +78,9 @@ mvn test        # unit + integration (các IT cần Docker đang chạy cho Test
 - Seed demo: gán `app_user_role` + phiếu NC/CAPA/PR mẫu đủ trạng thái (tắt ở profile test).
 - Docker (Dockerfile + docker-compose) + CI GitHub Actions (`mvn -B -ntp clean test`).
 - Hệ thống thông báo (outbox): nhắc mốc kiểm chứng CAPA sắp/đến hạn + cảnh báo action CAPA quá hạn; lưu bảng `notification` (PENDING→SENT) + log mô phỏng gửi email (chỗ cắm SMTP sau), có scheduler quét/flush định kỳ (tắt ở profile test).
+- Import bộ mã lỗi từ file xlsx: `POST /api/v1/masterdata/ma-loi/import` (multipart, param `file`, chỉ nhận `.xlsx`) → `MaLoiImportService` đọc workbook POI (sheet `NhomLoi` + `MaLoi`, map theo tên header), validate rồi upsert idempotent vào `nhom_loi`/`ma_loi`. Chính sách **all-or-nothing** (có dòng lỗi → không ghi gì, trả danh sách lỗi theo sheet + số dòng). Là kênh BỔ SUNG cho seed tay `DemoSeeder` (seed tay vẫn giữ để demo).
 
-Chưa làm (ngoài phạm vi app mẫu hiện tại): Spring Security / login thật (hiện dùng cơ chế demo + SoD theo role ở tầng service); import master data từ file xlsx thật (hiện seed tay theo APPX); versioning bản ghi đã xác nhận (hiện audit log che phần lớn nhu cầu truy vết).
+Chưa làm (ngoài phạm vi app mẫu hiện tại): Spring Security / login thật (hiện dùng cơ chế demo + SoD theo role ở tầng service); versioning bản ghi đã xác nhận (hiện audit log che phần lớn nhu cầu truy vết).
 
 ## Lưu ý verify
 Tài liệu code được viết cho JDK 17; máy phát triển hiện tại là Java 8 nên **chưa build/test tại chỗ**. Cần JDK 17 + Maven (+ Docker cho IT) để `mvn test` xanh.
