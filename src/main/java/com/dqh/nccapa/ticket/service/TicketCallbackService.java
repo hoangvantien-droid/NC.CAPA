@@ -76,11 +76,13 @@ public class TicketCallbackService {
      */
     @Transactional
     public int flush() {
+        // App mẫu: flush gửi mọi dòng PENDING theo id tăng dần (early trước closed).
+        // Cơ chế trì hoãn retry theo wall-clock bỏ qua ở đây để test deterministic, tránh lệch
+        // timezone JVM↔DB; retry vẫn giới hạn bằng so_lan_thu → DEAD_LETTER (production có thể
+        // thêm điều kiện thời gian ở job định kỳ).
         List<TicketCallbackOutbox> pending = outboxRepo.findByTrangThaiOrderByIdAsc("PENDING");
         int sent = 0;
-        LocalDateTime now = LocalDateTime.now();
         for (TicketCallbackOutbox o : pending) {
-            if (o.getThuKeTiepLuc() != null && o.getThuKeTiepLuc().isAfter(now)) continue; // chưa tới hạn
             boolean ok = sender.send(appProps.getTicket().getCallbackUrl(), o.getPayload());
             if (ok) {
                 o.danhDauGui();

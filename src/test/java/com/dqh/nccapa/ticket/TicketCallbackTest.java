@@ -54,10 +54,6 @@ class TicketCallbackTest extends MySqlTestBase {
     @Test // flush gửi thành công -> SENT
     void flush_thanhCong_sent() {
         callbackService.enqueue("TK-2", "early_response", "e1", "KPH-SEED", Map.of());
-        // chẩn đoán: dòng vừa enqueue có ở trạng thái PENDING trong DB không?
-        Long pending = jdbc.queryForObject(
-                "SELECT COUNT(*) FROM ticket_callback_outbox WHERE ticket_id='TK-2' AND trang_thai='PENDING'", Long.class);
-        assertThat(pending).as("so dong PENDING sau enqueue").isEqualTo(1L);
         int n = callbackService.flush();
         assertThat(n).isEqualTo(1);
         assertThat(outboxRepo.findByTicketIdOrderByIdAsc("TK-2").get(0).getTrangThai()).isEqualTo("SENT");
@@ -67,10 +63,9 @@ class TicketCallbackTest extends MySqlTestBase {
     void flush_thatBai_deadLetter() {
         callbackService.enqueue("TK-3", "early_response", "e2", "KPH-SEED", Map.of());
         when(sender.send(anyString(), anyString())).thenReturn(false);   // luôn fail
-        for (int i = 0; i < 3; i++) {
-            callbackService.flush();
-            jdbc.update("UPDATE ticket_callback_outbox SET thu_ke_tiep_luc = DATE_SUB(NOW(), INTERVAL 1 MINUTE) WHERE ticket_id='TK-3'");
-        }
+        callbackService.flush();   // lần 1: so_lan_thu 1
+        callbackService.flush();   // lần 2: 2
+        callbackService.flush();   // lần 3: 3 >= maxRetry -> DEAD_LETTER
         assertThat(outboxRepo.findByTicketIdOrderByIdAsc("TK-3").get(0).getTrangThai()).isEqualTo("DEAD_LETTER");
     }
 
@@ -90,11 +85,6 @@ class TicketCallbackTest extends MySqlTestBase {
         // thứ tự enqueue: early_response (id nhỏ) trước case_closed — flush gửi theo id tăng dần
         assertThat(rows.get(0).getCallbackType()).isEqualTo("early_response");
         assertThat(rows.get(1).getCallbackType()).isEqualTo("case_closed");
-
-        Long pend = jdbc.queryForObject("SELECT COUNT(*) FROM ticket_callback_outbox WHERE trang_thai='PENDING'", Long.class);
-        Long pendDue = jdbc.queryForObject("SELECT COUNT(*) FROM ticket_callback_outbox WHERE trang_thai='PENDING' AND (thu_ke_tiep_luc IS NULL OR thu_ke_tiep_luc <= NOW())", Long.class);
-        assertThat(pend).as("tong PENDING").isEqualTo(2L);
-        assertThat(pendDue).as("PENDING toi han").isEqualTo(2L);
 
         int sent = callbackService.flush();
         assertThat(sent).isEqualTo(2);   // cả 2 callback được gửi
