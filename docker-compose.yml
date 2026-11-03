@@ -1,0 +1,37 @@
+# Chạy thử server thật: MySQL 8 + app NC/CAPA. Một lệnh: docker compose up --build
+services:
+  mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_DATABASE: nc_capa
+      MYSQL_USER: nc_capa
+      MYSQL_PASSWORD: nc_capa
+      MYSQL_ROOT_PASSWORD: root
+      TZ: Asia/Ho_Chi_Minh
+    command: ["--default-time-zone=+07:00"]
+    ports:
+      - "3306:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    volumes:
+      - nc_capa_data:/var/lib/mysql
+
+  app:
+    build: .
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      DB_URL: "jdbc:mysql://mysql:3306/nc_capa?useSSL=false&serverTimezone=Asia/Ho_Chi_Minh&allowPublicKeyRetrieval=true"
+      DB_USER: nc_capa
+      DB_PASS: nc_capa
+      SEED_ENABLED: "true"
+      TZ: Asia/Ho_Chi_Minh
+    ports:
+      - "8080:8080"
+
+volumes:
+  nc_capa_data:
