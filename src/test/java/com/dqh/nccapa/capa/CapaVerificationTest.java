@@ -38,6 +38,9 @@ class CapaVerificationTest extends MySqlTestBase {
         // "qatd" là QA TẬP ĐOÀN để qua guard dời hạn (điểm mở #7): seed demo tắt ở profile test
         // nên app_user_role rỗng — phải seed trực tiếp vai trò cho actor dời hạn.
         DefectSeed.seedUserRole(jdbc, "qatd", "QA_TAP_DOAN");
+        // NC Nặng (PRC-02) cần người duyệt disposition thuộc nhóm QA (REQ 6.2) — seed cho 2 người duyệt.
+        DefectSeed.seedUserRole(jdbc, "qaNM1", "QA_NHA_MAY");
+        DefectSeed.seedUserRole(jdbc, "qaNM2", "QA_NHA_MAY");
     }
 
     private Nc taoNc(String maLoi, String lo) {

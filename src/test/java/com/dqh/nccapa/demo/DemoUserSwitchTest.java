@@ -45,7 +45,12 @@ class DemoUserSwitchTest extends MySqlTestBase {
     @Autowired JdbcTemplate jdbc;
 
     @BeforeEach
-    void setUp() { DefectSeed.seed(jdbc); }
+    void setUp() {
+        DefectSeed.seed(jdbc);
+        // SoD-theo-role: người duyệt NC Nặng phải thuộc nhóm QA — seed role THẬT cho qatd
+        // (seed demo tắt ở profile test → app_user_role rỗng).
+        DefectSeed.seedUserRole(jdbc, "qatd", "QA_TAP_DOAN");
+    }
 
     @Test
     void danhSach_dung5TaiKhoan() {

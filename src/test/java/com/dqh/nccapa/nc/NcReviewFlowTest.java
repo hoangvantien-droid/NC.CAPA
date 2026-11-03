@@ -26,7 +26,14 @@ class NcReviewFlowTest extends MySqlTestBase {
     @Autowired JdbcTemplate jdbc;
 
     @BeforeEach
-    void setUp() { DefectSeed.seed(jdbc); }
+    void setUp() {
+        DefectSeed.seed(jdbc);
+        // NC Nặng cần người duyệt thuộc nhóm QA (REQ 6.2) — seed role THẬT cho các actor duyệt
+        // (seed demo tắt ở profile test → app_user_role rỗng).
+        DefectSeed.seedUserRole(jdbc, "qaNM1", "QA_NHA_MAY");
+        DefectSeed.seedUserRole(jdbc, "qaNM2", "QA_NHA_MAY");
+        DefectSeed.seedUserRole(jdbc, "qaX", "QA_NHA_MAY");
+    }
 
     private Nc taoNcNang(String lo) {
         TaoNcRequest r = new TaoNcRequest();
@@ -69,6 +76,25 @@ class NcReviewFlowTest extends MySqlTestBase {
         v.ketLuanThamTra = "đạt"; v.actor = "qaNM1";
         ncService.verifyClose(nc.getSoHieu(), v);
         assertThat(reload(nc).getTrangThai()).isEqualTo(NcStatus.Closed);
+    }
+
+    @Test // Siết SoD theo role THẬT: NC Nặng -> actor KHÔNG thuộc nhóm QA bị chặn duyệt
+    void ncNang_actorKhongPhaiQa_biChan() {
+        Nc nc = taoNcNang("LOT-N6");
+        submit(nc, "proposer");
+        DefectSeed.seedUserRole(jdbc, "sx1", "BO_PHAN_SX"); // có user nhưng không phải QA
+        ApproveRequest a = new ApproveRequest(); a.actor = "sx1";
+        assertThatThrownBy(() -> ncService.approve(nc.getSoHieu(), a))
+                .isInstanceOf(BusinessException.class);
+        assertThat(reload(nc).getTrangThai()).isEqualTo(NcStatus.PendingApproval); // chưa duyệt
+    }
+
+    @Test // NC Nặng -> actor QA (QA_NHA_MAY) duyệt được cấp 1
+    void ncNang_actorQa_duyetDuoc() {
+        Nc nc = taoNcNang("LOT-N7");
+        submit(nc, "proposer");
+        approve(nc, "qaNM1"); // qaNM1 đã seed QA_NHA_MAY
+        assertThat(reload(nc).getTrangThai()).isEqualTo(NcStatus.PendingApproval); // cấp 1 xong, chờ người 2
     }
 
     @Test // AC25: cùng user duyệt 2 lần bị chặn

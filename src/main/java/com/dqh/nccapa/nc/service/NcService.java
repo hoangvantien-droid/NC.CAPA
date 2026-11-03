@@ -7,6 +7,7 @@ import com.dqh.nccapa.common.enums.NcStatus;
 import com.dqh.nccapa.common.enums.Severity;
 import com.dqh.nccapa.common.error.BusinessException;
 import com.dqh.nccapa.common.error.ErrorCode;
+import com.dqh.nccapa.common.security.RoleChecker;
 import com.dqh.nccapa.config.AppProperties;
 import com.dqh.nccapa.masterdata.entity.MaLoi;
 import com.dqh.nccapa.masterdata.service.DefectCatalogService;
@@ -50,13 +51,15 @@ public class NcService {
     private final RecurrenceHook recurrenceHook;
     private final TicketCallbackHook ticketCallbackHook;
     private final AppProperties appProps;
+    private final RoleChecker roleChecker;
 
     public NcService(NcRepository ncRepo, NcChiTieuRepository chiTieuRepo,
                      NcDoiTuongRepository doiTuongRepo, DefectCatalogService defectCatalog,
                      SequenceGenerator sequence, AuditService audit,
                      CapaClosureChecker capaClosureChecker, EarlyFailHook earlyFailHook,
                      RecurrenceHook recurrenceHook,
-                     TicketCallbackHook ticketCallbackHook, AppProperties appProps) {
+                     TicketCallbackHook ticketCallbackHook, AppProperties appProps,
+                     RoleChecker roleChecker) {
         this.ncRepo = ncRepo;
         this.chiTieuRepo = chiTieuRepo;
         this.doiTuongRepo = doiTuongRepo;
@@ -68,6 +71,7 @@ public class NcService {
         this.recurrenceHook = recurrenceHook;
         this.ticketCallbackHook = ticketCallbackHook;
         this.appProps = appProps;
+        this.roleChecker = roleChecker;
     }
 
     /** NC có nguồn khiếu nại (có ticket gắn)? dùng để quyết định callback. */
@@ -176,8 +180,23 @@ public class NcService {
                     "SoD: người đề xuất disposition không được tự duyệt");
         }
 
+        // Siết SoD THEO ROLE THẬT (REQ mục 6.2, ma trận duyệt disposition): xác minh actor thực sự
+        // có vai trò QA phù hợp với mức NC trong app_user_role, KHÔNG tin vai trò do client khai.
+        //   - NC Nghiêm trọng: QA TẬP ĐOÀN (REQ: "NC Nghiêm trọng: QA tập đoàn").
+        //   - NC Nặng: nhóm QA (REQ: "QA nhà máy + người thứ hai"). REQ không gắn cứng người thứ hai
+        //     phải là QA tập đoàn → chấp nhận QA_NHA_MAY HOẶC QA_TAP_DOAN cho cả 2 lượt duyệt NC Nặng.
         if (nc.getMucNghiemTrong() == Severity.NGHIEM_TRONG) {
-            // 1 lần duyệt (QA TĐ — phân quyền role kiểm ở lát security)
+            if (!roleChecker.laQaTapDoan(req.actor)) {
+                throw new BusinessException(ErrorCode.ROLE_DENIED,
+                        "NC Nghiêm trọng: chỉ QA tập đoàn được duyệt disposition");
+            }
+        } else if (!roleChecker.laQa(req.actor)) {
+            throw new BusinessException(ErrorCode.ROLE_DENIED,
+                    "NC Nặng: người duyệt disposition phải thuộc nhóm QA");
+        }
+
+        if (nc.getMucNghiemTrong() == Severity.NGHIEM_TRONG) {
+            // 1 lần duyệt (QA TĐ — vai trò đã xác minh ở trên)
             doChuyenProcessing(nc, req.actor);
         } else { // NANG: 2 cấp
             if (!nc.isDaDuyetCap1()) {

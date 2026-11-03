@@ -5,6 +5,7 @@ import com.dqh.nccapa.common.enums.LoaiThayDoi;
 import com.dqh.nccapa.common.enums.PrStatus;
 import com.dqh.nccapa.common.error.BusinessException;
 import com.dqh.nccapa.common.error.ErrorCode;
+import com.dqh.nccapa.common.security.RoleChecker;
 import com.dqh.nccapa.pr.dto.PrActionRequest;
 import com.dqh.nccapa.pr.dto.TaoPrRequest;
 import com.dqh.nccapa.pr.entity.Pr;
@@ -28,13 +29,15 @@ public class PrService {
     private final PrApprovalRepository approvalRepo;
     private final PrLinkDao linkDao;
     private final AuditService audit;
+    private final RoleChecker roleChecker;
 
     public PrService(PrRepository prRepo, PrApprovalRepository approvalRepo,
-                     PrLinkDao linkDao, AuditService audit) {
+                     PrLinkDao linkDao, AuditService audit, RoleChecker roleChecker) {
         this.prRepo = prRepo;
         this.approvalRepo = approvalRepo;
         this.linkDao = linkDao;
         this.audit = audit;
+        this.roleChecker = roleChecker;
     }
 
     @Transactional
@@ -117,6 +120,12 @@ public class PrService {
         if (req.vaiTro == null || !req.vaiTro.equals(vaiTroCanDuyet)) {
             throw new BusinessException(ErrorCode.ROLE_DENIED,
                     "Cấp " + (cap + 1) + " cần vai trò: " + vaiTroCanDuyet);
+        }
+        // Siết SoD THEO ROLE THẬT: ngoài việc vaiTro khai phải khớp chuỗi duyệt, actor PHẢI thực sự
+        // được gán role đó trong app_user_role (không tin vai trò do client tự khai).
+        if (!roleChecker.coRole(req.actor, vaiTroCanDuyet)) {
+            throw new BusinessException(ErrorCode.ROLE_DENIED,
+                    "Người duyệt không có vai trò thực: " + vaiTroCanDuyet);
         }
         approvalRepo.save(new PrApproval(id, cap, vaiTroCanDuyet, "APPROVED", req.actor, null));
         audit.log("PR", String.valueOf(id), "DUYET_CAP", String.valueOf(cap), vaiTroCanDuyet, null, req.actor);

@@ -28,7 +28,12 @@ class NcContainmentFlowTest extends MySqlTestBase {
     @Autowired JdbcTemplate jdbc;
 
     @BeforeEach
-    void setUp() { DefectSeed.seed(jdbc); }
+    void setUp() {
+        DefectSeed.seed(jdbc);
+        // NC Nghiêm trọng cần QA TẬP ĐOÀN duyệt (REQ 6.2) — seed role THẬT cho actor duyệt
+        // (seed demo tắt ở profile test → app_user_role rỗng).
+        DefectSeed.seedUserRole(jdbc, "qatd", "QA_TAP_DOAN");
+    }
 
     private Nc taoNcNghiemTrong(String lo) {
         TaoNcRequest r = new TaoNcRequest();
@@ -56,6 +61,32 @@ class NcContainmentFlowTest extends MySqlTestBase {
         ncService.submitApproval(so, s);
         ApproveRequest a = new ApproveRequest(); a.actor = "qatd";  // Nghiêm trọng: 1 lần
         ncService.approve(so, a);
+    }
+
+    @Test // Siết SoD theo role THẬT: NC Nghiêm trọng -> actor KHÔNG phải QA_TAP_DOAN bị chặn duyệt
+    void nghiemTrong_actorKhongPhaiQaTapDoan_biChan() {
+        Nc nc = taoNcNghiemTrong("LOT-C5");
+        String so = nc.getSoHieu();
+        containment(so, "LOT-C5", "HOLD-005");
+        SubmitApprovalRequest s = new SubmitApprovalRequest();
+        s.nguyenNhanSoBo = "rc"; s.dispositionDeXuat = "TIEU_HUY";
+        s.chiPhiUocTinh = new BigDecimal("5000000"); s.boPhanThucHien = "QA"; s.actor = "proposer";
+        ncService.submitApproval(so, s);
+        // qamgp là QA_NHA_MAY (không đủ cho NC Nghiêm trọng) -> ROLE_DENIED
+        DefectSeed.seedUserRole(jdbc, "qamgp", "QA_NHA_MAY");
+        ApproveRequest a = new ApproveRequest(); a.actor = "qamgp";
+        assertThatThrownBy(() -> ncService.approve(so, a))
+                .isInstanceOf(BusinessException.class);
+        assertThat(ncService.layNc(so).getTrangThai()).isEqualTo(NcStatus.PendingApproval);
+    }
+
+    @Test // NC Nghiêm trọng -> actor QA_TAP_DOAN duyệt 1 lần -> Processing
+    void nghiemTrong_actorQaTapDoan_duyetQua() {
+        Nc nc = taoNcNghiemTrong("LOT-C6");
+        String so = nc.getSoHieu();
+        containment(so, "LOT-C6", "HOLD-006");
+        submitApprove(so); // approve bằng qatd (QA_TAP_DOAN) đã seed
+        assertThat(ncService.layNc(so).getTrangThai()).isEqualTo(NcStatus.Processing);
     }
 
     @Test // AC2: NC Nghiêm trọng bắt buộc qua Containment có Hold

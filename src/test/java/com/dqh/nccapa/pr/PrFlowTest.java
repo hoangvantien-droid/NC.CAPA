@@ -24,7 +24,13 @@ class PrFlowTest extends MySqlTestBase {
     @Autowired JdbcTemplate jdbc;
 
     @BeforeEach
-    void setUp() { DefectSeed.seed(jdbc); }
+    void setUp() {
+        DefectSeed.seed(jdbc);
+        // Seed role THẬT cho các actor duyệt (seed demo tắt ở profile test → app_user_role rỗng).
+        DefectSeed.seedUserRole(jdbc, "rd1", "R_AND_D");
+        DefectSeed.seedUserRole(jdbc, "qatd", "QA_TAP_DOAN");
+        DefectSeed.seedUserRole(jdbc, "pc", "PHAP_CHE");
+    }
 
     private Pr taoPr(LoaiThayDoi loai, String maHang, String maLoi) {
         TaoPrRequest r = new TaoPrRequest();
@@ -70,6 +76,26 @@ class PrFlowTest extends MySqlTestBase {
         // cấp 0 cần R_AND_D, nhưng duyệt bằng QA_TAP_DOAN
         assertThatThrownBy(() -> prService.approve(id, approveAs("QA_TAP_DOAN", "x")))
                 .isInstanceOf(BusinessException.class);
+    }
+
+    @Test // Siết SoD theo role THẬT: vaiTro khai đúng chuỗi nhưng actor KHÔNG có role thực -> ROLE_DENIED
+    void vaiTroKhaiDung_nhungActorKhongCoRoleThat_biChan() {
+        Pr pr = taoPr(LoaiThayDoi.QUY_CACH, "SP001", "FG-07"); // 1 cấp QA_TAP_DOAN
+        Long id = pr.getId();
+        toPending(id);
+        // "mao" khai vaiTro=QA_TAP_DOAN (khớp chuỗi) nhưng KHÔNG được gán role trong app_user_role
+        assertThatThrownBy(() -> prService.approve(id, approveAs("QA_TAP_DOAN", "mao")))
+                .isInstanceOf(BusinessException.class);
+        assertThat(prService.lay(id).getTrangThai()).isEqualTo(PrStatus.PendingApproval); // chưa duyệt
+    }
+
+    @Test // actor khai đúng chuỗi VÀ có role thực -> duyệt qua
+    void vaiTroKhaiDung_actorCoRoleThat_duyetQua() {
+        Pr pr = taoPr(LoaiThayDoi.QUY_CACH, "SP001", "FG-08"); // 1 cấp QA_TAP_DOAN
+        Long id = pr.getId();
+        toPending(id);
+        prService.approve(id, approveAs("QA_TAP_DOAN", "qatd")); // qatd đã seed role QA_TAP_DOAN
+        assertThat(prService.lay(id).getTrangThai()).isEqualTo(PrStatus.Approved);
     }
 
     @Test // Từ chối -> Rejected -> resubmit (toAnalyzing) lại được

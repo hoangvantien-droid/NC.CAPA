@@ -17,6 +17,7 @@ import com.dqh.nccapa.common.enums.ExtensionStatus;
 import com.dqh.nccapa.common.enums.LoaiThayDoi;
 import com.dqh.nccapa.common.enums.Severity;
 import com.dqh.nccapa.common.error.BusinessException;
+import com.dqh.nccapa.common.security.RoleChecker;
 import com.dqh.nccapa.config.AppProperties;
 import com.dqh.nccapa.nc.entity.Nc;
 import com.dqh.nccapa.nc.repository.NcRepository;
@@ -49,13 +50,14 @@ public class CapaService {
     private final JdbcTemplate jdbc;
     private final AuditService audit;
     private final PrService prService;
+    private final RoleChecker roleChecker;
 
     public CapaService(CapaRepository capaRepo, CapaActionRepository actionRepo,
                        CapaActionExtensionRepository extRepo, CapaVerificationRepository verRepo,
                        com.dqh.nccapa.capa.repository.Capa8dStepRepository stepRepo,
                        NcCapaLinkDao linkDao, NcRepository ncRepo, NcService ncService,
                        MesLotCounter mesLotCounter, AppProperties appProps, JdbcTemplate jdbc,
-                       AuditService audit, PrService prService) {
+                       AuditService audit, PrService prService, RoleChecker roleChecker) {
         this.capaRepo = capaRepo;
         this.actionRepo = actionRepo;
         this.extRepo = extRepo;
@@ -69,6 +71,7 @@ public class CapaService {
         this.jdbc = jdbc;
         this.audit = audit;
         this.prService = prService;
+        this.roleChecker = roleChecker;
     }
 
     // ---- 8D (Đợt d) ----
@@ -315,7 +318,7 @@ public class CapaService {
         yeuCau(capa, CapaStatus.Monitoring);
         // Điểm mở #7 / quy tắc #14: NC gốc Nặng trở lên → chỉ QA TẬP ĐOÀN được dời hạn mốc kiểm chứng.
         // NC Nhẹ: giữ nguyên hành vi cũ (không kiểm vai trò).
-        if (mucNcGocCaoNhat(capaId).ordinalGte(Severity.NANG) && !laQaTapDoan(req.actor)) {
+        if (mucNcGocCaoNhat(capaId).ordinalGte(Severity.NANG) && !roleChecker.laQaTapDoan(req.actor)) {
             throw BusinessException.guard(
                     "NC Nặng trở lên: chỉ QA tập đoàn được dời hạn mốc kiểm chứng");
         }
@@ -465,16 +468,6 @@ public class CapaService {
             if (nc != null) max = Severity.nangNhat(max, nc.getMucNghiemTrong());
         }
         return max;
-    }
-
-    /** True nếu {@code username} có vai trò QA_TAP_DOAN (tra app_user_role JOIN app_user). */
-    boolean laQaTapDoan(String username) {
-        if (username == null || username.isBlank()) return false;
-        Integer n = jdbc.queryForObject(
-                "SELECT COUNT(*) FROM app_user_role ur JOIN app_user u ON u.id = ur.user_id " +
-                "WHERE u.username = ? AND ur.role_ma = 'QA_TAP_DOAN'",
-                Integer.class, username);
-        return n != null && n > 0;
     }
 
     private void yeuCau(Capa capa, CapaStatus expected) {
