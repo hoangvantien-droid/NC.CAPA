@@ -56,6 +56,10 @@
     <p class="hint" id="err" style="color:var(--hold);display:none"></p>
   </form>
 
+  <script th:inline="javascript">
+    // Context path (prod: '/nc-capa/', local: '/'); @{/} tự thêm context path.
+    window.CTX = /*[[@{/}]]*/ '/';
+  </script>
   <script th:inline="none">
     document.getElementById('f').addEventListener('submit', function(e){
       e.preventDefault();
@@ -66,10 +70,10 @@
         loKiem: g('loKiem') || null, moTaLoi: g('moTaLoi') || null,
         chiTieu: [ { maLoiId: g('maLoiId'), maHang: g('maHang') || null } ]
       };
-      fetch('/api/v1/nc', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) })
+      fetch(CTX + 'api/v1/nc', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) })
         .then(function(r){ return r.json(); })
         .then(function(res){
-          if(res.success){ location.href = '/nc/' + encodeURIComponent(res.data.soHieu); }
+          if(res.success){ location.href = CTX + 'nc/' + encodeURIComponent(res.data.soHieu); }
           else {
             var el = document.getElementById('err');
             el.style.display='block';

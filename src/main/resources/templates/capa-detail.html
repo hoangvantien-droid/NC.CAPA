@@ -102,12 +102,14 @@
       <section class="panel">
         <h2>Bước kế tiếp</h2>
         <div class="body">
-          <div class="actions" th:if="${!hanhDong.isEmpty()}">
+          <div class="actions" th:if="${!hanhDong.isEmpty() or coKetQuaKiemChung}">
             <button class="btn" th:each="h : ${hanhDong}"
                     th:classappend="${h.ma == 'mark-ineffective'} ? 'danger' : ''"
                     th:data-action="${h.ma}" th:data-id="${capa.id}" th:text="${h.nhan}">Hành động</button>
+            <button class="btn" th:if="${coKetQuaKiemChung}"
+                    th:data-action="'sua-ket-qua'" th:data-id="${capa.id}">Sửa kết quả kiểm chứng</button>
           </div>
-          <p class="empty" th:if="${hanhDong.isEmpty()}">CAPA đã ở trạng thái cuối.</p>
+          <p class="empty" th:if="${hanhDong.isEmpty() and !coKetQuaKiemChung}">CAPA đã ở trạng thái cuối.</p>
         </div>
       </section>
 
@@ -127,6 +129,10 @@
     </div>
   </div>
 
+  <script th:inline="javascript">
+    // Context path (prod: '/nc-capa/', local: '/'); @{/} tự thêm context path.
+    window.CTX = /*[[@{/}]]*/ '/';
+  </script>
   <script th:inline="none">
     function post(url, body, after){
       fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) })
@@ -162,17 +168,24 @@
         if(a==='add-action'){
           var lo=prompt('Loại (TUC_THOI/NGAN_TAI_DIEN):','NGAN_TAI_DIEN');
           var cat=prompt('Loại hành động (CORRECTIVE/PREVENTIVE):','CORRECTIVE');
-          post('/api/v1/capa/'+id+'/actions', { actor:actor, loai:lo, loaiHanhDong:cat, moTa:prompt('Mô tả:',''), nguoiPhuTrach:prompt('Phụ trách:','sx'), deadline:prompt('Hạn (YYYY-MM-DD):','2026-12-31') });
+          post(CTX + 'api/v1/capa/'+id+'/actions', { actor:actor, loai:lo, loaiHanhDong:cat, moTa:prompt('Mô tả:',''), nguoiPhuTrach:prompt('Phụ trách:','sx'), deadline:prompt('Hạn (YYYY-MM-DD):','2026-12-31') });
           return;
         }
-        post('/api/v1/capa/'+id+'/'+a, body);
+        if(a==='sua-ket-qua'){
+          body.ketQua = prompt('Kết quả mới (HIEU_QUA/KHONG_HIEU_QUA):','HIEU_QUA');
+          body.bienBanKiemTra = prompt('Biên bản kiểm tra (tuỳ chọn):','');
+          body.lyDo = prompt('Lý do sửa:','');
+          post(CTX + 'api/v1/capa/'+id+'/verification/sua-ket-qua', body);
+          return;
+        }
+        post(CTX + 'api/v1/capa/'+id+'/'+a, body);
       });
     });
     document.querySelectorAll('button[data-complete]').forEach(function(btn){
       btn.addEventListener('click', function(){
         var aid = btn.getAttribute('data-complete');
         var actor = prompt('Người thực hiện:','sx'); if(!actor) return;
-        post('/api/v1/capa/actions/'+aid+'/complete', { actor:actor, bangChung:prompt('Bằng chứng:','') });
+        post(CTX + 'api/v1/capa/actions/'+aid+'/complete', { actor:actor, bangChung:prompt('Bằng chứng:','') });
       });
     });
     // Đính kèm file cho action (Nhóm 2): liệt kê + upload nhanh.
@@ -180,9 +193,9 @@
       btn.addEventListener('click', function(){
         var aid = btn.getAttribute('data-att-action');
         var q = '?doiTuong=ACTION&doiTuongId=' + encodeURIComponent(aid);
-        fetch('/api/v1/attachment' + q).then(function(r){ return r.json(); }).then(function(res){
+        fetch(CTX + 'api/v1/attachment' + q).then(function(r){ return r.json(); }).then(function(res){
           var items = (res.success && res.data) ? res.data : [];
-          var ds = items.map(function(x){ return '• ' + x.tenFile + '  (' + window.location.origin + '/api/v1/attachment/' + x.id + '/download)'; }).join('\n');
+          var ds = items.map(function(x){ return '• ' + x.tenFile + '  (' + window.location.origin + CTX + 'api/v1/attachment/' + x.id + '/download)'; }).join('\n');
           alert('File của action #' + aid + ':\n' + (ds || '(chưa có)'));
           if(!confirm('Tải lên file mới cho action #' + aid + '?')) return;
           var input = document.createElement('input');
@@ -195,7 +208,7 @@
             fd.append('doiTuongId', aid);
             fd.append('file', input.files[0]);
             fd.append('actor', actor);
-            fetch('/api/v1/attachment', { method:'POST', body: fd })
+            fetch(CTX + 'api/v1/attachment', { method:'POST', body: fd })
               .then(function(r){ return r.json(); })
               .then(function(r){ if(r.success){ alert('Đã tải lên.'); } else { alert('Không tải được: ' + (r.error ? r.error.message : 'lỗi')); } })
               .catch(function(e){ alert('Lỗi mạng: '+e); });

@@ -74,6 +74,13 @@ public class CapaController {
         return ApiResponse.ok(capaService.verificationStatus(id));
     }
 
+    /** D-04 / REQ I7: sửa kết quả kiểm chứng CAPA đã xác nhận → lưu snapshot (versioning). */
+    @PostMapping("/capa/{id}/verification/sua-ket-qua")
+    public ApiResponse<com.dqh.nccapa.capa.entity.CapaVerification> suaKetQuaKiemChung(
+            @PathVariable("id") Long id, @Valid @RequestBody SuaKetQuaKiemChungRequest req) {
+        return ApiResponse.ok(capaService.suaKetQuaKiemChung(id, req));
+    }
+
     @PostMapping("/capa/{id}/postpone-reminder")
     public ApiResponse<Capa> postpone(@PathVariable("id") Long id, @Valid @RequestBody PostponeRequest req) {
         return ApiResponse.ok(capaService.postponeReminder(id, req));

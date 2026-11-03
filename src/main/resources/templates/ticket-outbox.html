@@ -39,9 +39,13 @@
     </table>
   </main>
 
+  <script th:inline="javascript">
+    // Context path (prod: '/nc-capa/', local: '/'); @{/} tự thêm context path.
+    window.CTX = /*[[@{/}]]*/ '/';
+  </script>
   <script th:inline="none">
     document.getElementById('flush').addEventListener('click', function(){
-      fetch('/api/v1/ticket/flush', { method:'POST' })
+      fetch(CTX + 'api/v1/ticket/flush', { method:'POST' })
         .then(function(r){ return r.json(); })
         .then(function(res){ if(res.success){ alert('Đã gửi ' + res.data + ' callback.'); location.reload(); }
           else { alert('Lỗi: ' + (res.error ? res.error.message : '')); } })

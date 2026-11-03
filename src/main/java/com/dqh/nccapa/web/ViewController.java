@@ -120,6 +120,11 @@ public class ViewController {
         model.addAttribute("ncs", ncCapaLink.ncSoHieuOfCapa(id));
         model.addAttribute("hanhDong", hanhDongCapa(capa));
         model.addAttribute("steps8d", capa.getTrangThai() != null ? capaService.steps8d(id) : java.util.List.of());
+        // D-04: cho sửa kết quả kiểm chứng (I7 versioning) khi đã có ket_qua đã xác nhận.
+        boolean coKetQua = verRepo.findByCapaId(id)
+                .map(v -> v.getKetQua() != null && !v.getKetQua().isBlank())
+                .orElse(false);
+        model.addAttribute("coKetQuaKiemChung", coKetQua);
         return "capa-detail";
     }
 

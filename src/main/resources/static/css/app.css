@@ -156,9 +156,18 @@ dl.kv dd{margin:0}
 .hint{font-size:12.5px;color:var(--muted);margin-top:4px}
 .empty{color:var(--muted);padding:24px 12px;text-align:center}
 
+/* D-03: bảng trong chi tiết cuộn ngang trên màn hẹp thay vì làm tràn viewport */
+.table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+
 @media (max-width:780px){
   .detail{grid-template-columns:1fr}
   .statusbar{gap:20px}
+}
+
+/* D-03: củng cố layout 1 cột + cho bảng cuộn ngang trên mobile */
+@media (max-width:720px){
+  .detail{grid-template-columns:1fr}
+  .table-wrap{max-width:100%}
 }
 
 /* Dashboard */

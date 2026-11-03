@@ -104,6 +104,10 @@
     </div>
   </div>
 
+  <script th:inline="javascript">
+    // Context path (prod: '/nc-capa/', local: '/'); @{/} tự thêm context path.
+    window.CTX = /*[[@{/}]]*/ '/';
+  </script>
   <script th:inline="none">
     document.querySelectorAll('button[data-action]').forEach(function(btn){
       btn.addEventListener('click', function(){
@@ -114,7 +118,7 @@
         var body = { actor: actor };
         if(a==='approve'){ body.vaiTro = prompt('Vai trò duyệt (cấp hiện tại):', vaiTro || ''); }
         if(a==='reject'){ body.vaiTro = vaiTro; body.lyDo = prompt('Lý do từ chối:',''); }
-        fetch('/api/v1/pr/'+id+'/'+a, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) })
+        fetch(CTX + 'api/v1/pr/'+id+'/'+a, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) })
           .then(function(r){ return r.json(); })
           .then(function(res){ if(res.success){ location.reload(); } else { alert('Không thực hiện được: ' + (res.error ? res.error.message : 'lỗi')); } })
           .catch(function(e){ alert('Lỗi mạng: '+e); });

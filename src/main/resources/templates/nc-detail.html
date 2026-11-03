@@ -53,6 +53,7 @@
       <section class="panel">
         <h2>Chỉ tiêu vi phạm</h2>
         <div class="body">
+          <div class="table-wrap">
           <table>
             <thead><tr><th>Mã lỗi</th><th>Mã hàng</th><th>OOS</th><th>Nguồn</th></tr></thead>
             <tbody>
@@ -65,6 +66,7 @@
               <tr th:if="${chiTieu.isEmpty()}"><td colspan="4" class="empty">Chưa có chỉ tiêu.</td></tr>
             </tbody>
           </table>
+          </div>
         </div>
       </section>
 
@@ -72,6 +74,7 @@
       <section class="panel" th:if="${!doiTuong.isEmpty()}">
         <h2>Đối tượng ảnh hưởng</h2>
         <div class="body">
+          <div class="table-wrap">
           <table>
             <thead><tr><th>Loại</th><th>Giá trị</th><th>Khoanh vùng</th><th>Trạng thái lô</th></tr></thead>
             <tbody>
@@ -83,6 +86,7 @@
               </tr>
             </tbody>
           </table>
+          </div>
         </div>
       </section>
     </div>
@@ -148,6 +152,10 @@
     </div>
   </div>
 
+  <script th:inline="javascript">
+    // Context path (prod: '/nc-capa/', local: '/'); @{/} tự thêm context path.
+    window.CTX = /*[[@{/}]]*/ '/';
+  </script>
   <script th:inline="none">
     // Gọi API nghiệp vụ. actor LẤY TỪ tài khoản demo hiện tại (session) để demo SoD;
     // vẫn cho sửa qua prompt nếu cần. Các field khác (lý do/chi phí) nhập nhanh qua prompt.
@@ -172,11 +180,11 @@
           body.chiPhiUocTinh = Number(prompt('Chi phí ước tính:','0'));
           body.boPhanThucHien = prompt('Bộ phận thực hiện:','SX');
         }
-        fetch('/api/v1/nc/'+encodeURIComponent(so)+'/'+action, {
+        fetch(CTX + 'api/v1/nc/'+encodeURIComponent(so)+'/'+action, {
           method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)
         }).then(function(r){ return r.json(); }).then(function(res){
           if(res.success){
-            if(action==='capa' && res.data && res.data.id){ location.href='/capa/'+res.data.id; }
+            if(action==='capa' && res.data && res.data.id){ location.href = CTX + 'capa/' + res.data.id; }
             else { location.reload(); }
           }
           else { alert('Không thực hiện được: ' + (res.error ? res.error.message : 'lỗi')); }
@@ -194,7 +202,7 @@
 
       function loadList(){
         var q = '?doiTuong=NC&doiTuongId=' + encodeURIComponent(soHieu);
-        fetch('/api/v1/attachment' + q).then(function(r){ return r.json(); }).then(function(res){
+        fetch(CTX + 'api/v1/attachment' + q).then(function(r){ return r.json(); }).then(function(res){
           listEl.innerHTML = '';
           var items = (res.success && res.data) ? res.data : [];
           if(items.length === 0){
@@ -205,7 +213,7 @@
             var li = document.createElement('li');
             li.style.cssText = 'padding:6px 0;border-bottom:1px solid var(--line)';
             var link = document.createElement('a');
-            link.href = '/api/v1/attachment/' + a.id + '/download';
+            link.href = CTX + 'api/v1/attachment/' + a.id + '/download';
             link.textContent = a.tenFile;
             li.appendChild(link);
             var meta = document.createElement('span');
@@ -229,7 +237,7 @@
         fd.append('doiTuongId', soHieu);
         fd.append('file', fileEl.files[0]);
         fd.append('actor', actor);
-        fetch('/api/v1/attachment', { method:'POST', body: fd })
+        fetch(CTX + 'api/v1/attachment', { method:'POST', body: fd })
           .then(function(r){ return r.json(); })
           .then(function(res){
             if(res.success){ fileEl.value=''; loadList(); }
