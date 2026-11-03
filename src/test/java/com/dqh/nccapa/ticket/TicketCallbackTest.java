@@ -54,6 +54,10 @@ class TicketCallbackTest extends MySqlTestBase {
     @Test // flush gửi thành công -> SENT
     void flush_thanhCong_sent() {
         callbackService.enqueue("TK-2", "early_response", "e1", "KPH-SEED", Map.of());
+        // chẩn đoán: dòng vừa enqueue có ở trạng thái PENDING trong DB không?
+        Long pending = jdbc.queryForObject(
+                "SELECT COUNT(*) FROM ticket_callback_outbox WHERE ticket_id='TK-2' AND trang_thai='PENDING'", Long.class);
+        assertThat(pending).as("so dong PENDING sau enqueue").isEqualTo(1L);
         int n = callbackService.flush();
         assertThat(n).isEqualTo(1);
         assertThat(outboxRepo.findByTicketIdOrderByIdAsc("TK-2").get(0).getTrangThai()).isEqualTo("SENT");
