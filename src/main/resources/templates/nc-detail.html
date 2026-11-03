@@ -154,7 +154,7 @@
 
   <script th:inline="javascript">
     // Context path (prod: '/nc-capa/', local: '/'); @{/} tự thêm context path.
-    window.CTX = /*[[@{/}]]*/ '/';
+    window.CTX = (/*[[@{/}]]*/ '/').split(';')[0];
   </script>
   <script th:inline="none">
     // Gọi API nghiệp vụ. actor LẤY TỪ tài khoản demo hiện tại (session) để demo SoD;

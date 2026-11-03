@@ -168,6 +168,12 @@ dl.kv dd{margin:0}
 @media (max-width:720px){
   .detail{grid-template-columns:1fr}
   .table-wrap{max-width:100%}
+  /* .topbar (brand + user-switcher form + select + nút) wrap để không tràn ngang */
+  .topbar{flex-wrap:wrap;row-gap:8px}
+  .topbar .brand{flex:1 1 100%}
+  .topbar form{flex:1 1 auto;min-width:0}
+  .topbar select{max-width:100%}
+  .topbar .btn{margin-left:0 !important}
 }
 
 /* Dashboard */

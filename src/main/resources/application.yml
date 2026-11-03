@@ -48,3 +48,6 @@ springdoc:
 
 server:
   port: 8080
+  servlet:
+    session:
+      tracking-modes: cookie   # D-02: chỉ theo dõi phiên bằng cookie, không chèn ;jsessionid= vào @{...}
