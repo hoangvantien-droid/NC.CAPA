@@ -54,6 +54,35 @@ public class PrService {
         return pr;
     }
 
+    /**
+     * Tự động mở PR cho một vấn đề (mã hàng + mã lỗi) khi CAPA fail lần 2 / trần Nghiêm trọng
+     * (REQ mục 4.2, 5, quy tắc #13). IDEMPOTENT: nếu đã có PR đang mở cho vấn đề → KHÔNG tạo PR
+     * thứ 2, trả về PR đang mở đó. Dùng chung ràng buộc chống trùng {@link PrLinkDao#prDangMoChoVanDe}
+     * với luồng tạo PR thủ công ({@link #tao}).
+     *
+     * @return PR vừa tạo, hoặc PR đang mở sẵn (không null nếu maHang/maLoiId hợp lệ), hoặc null
+     *         nếu không đủ thông tin vấn đề để mở PR.
+     */
+    @Transactional
+    public Pr moTuDong(LoaiThayDoi loaiThayDoi, String maHang, String maLoiId,
+                       String ncSoHieu, Long capaId, String actor) {
+        if (maHang == null || maLoiId == null) return null;   // không đủ thông tin vấn đề
+        Long dangMo = linkDao.prDangMoChoVanDe(maHang, maLoiId, null);
+        if (dangMo != null) {
+            // Đã có PR đang mở cho vấn đề này → chống trùng: không tạo PR thứ 2.
+            if (ncSoHieu != null) linkDao.linkNc(dangMo, ncSoHieu);
+            if (capaId != null) linkDao.linkCapa(dangMo, capaId);
+            return lay(dangMo);
+        }
+        Pr pr = new Pr(loaiThayDoi, maHang, maLoiId, actor);
+        prRepo.save(pr);
+        if (ncSoHieu != null) linkDao.linkNc(pr.getId(), ncSoHieu);
+        if (capaId != null) linkDao.linkCapa(pr.getId(), capaId);
+        audit.log("PR", String.valueOf(pr.getId()), "TAO_PR_TU_DONG", null, loaiThayDoi.name(),
+                "tự động mở từ CAPA " + capaId, actor);
+        return pr;
+    }
+
     @Transactional
     public Pr toAnalyzing(Long id, PrActionRequest req) {
         Pr pr = lay(id);

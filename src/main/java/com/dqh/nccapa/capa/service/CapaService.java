@@ -14,12 +14,14 @@ import com.dqh.nccapa.common.audit.AuditService;
 import com.dqh.nccapa.common.enums.ActionStatus;
 import com.dqh.nccapa.common.enums.CapaStatus;
 import com.dqh.nccapa.common.enums.ExtensionStatus;
+import com.dqh.nccapa.common.enums.LoaiThayDoi;
 import com.dqh.nccapa.common.enums.Severity;
 import com.dqh.nccapa.common.error.BusinessException;
 import com.dqh.nccapa.config.AppProperties;
 import com.dqh.nccapa.nc.entity.Nc;
 import com.dqh.nccapa.nc.repository.NcRepository;
 import com.dqh.nccapa.nc.service.NcService;
+import com.dqh.nccapa.pr.service.PrService;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -46,13 +48,14 @@ public class CapaService {
     private final AppProperties appProps;
     private final JdbcTemplate jdbc;
     private final AuditService audit;
+    private final PrService prService;
 
     public CapaService(CapaRepository capaRepo, CapaActionRepository actionRepo,
                        CapaActionExtensionRepository extRepo, CapaVerificationRepository verRepo,
                        com.dqh.nccapa.capa.repository.Capa8dStepRepository stepRepo,
                        NcCapaLinkDao linkDao, NcRepository ncRepo, NcService ncService,
                        MesLotCounter mesLotCounter, AppProperties appProps, JdbcTemplate jdbc,
-                       AuditService audit) {
+                       AuditService audit, PrService prService) {
         this.capaRepo = capaRepo;
         this.actionRepo = actionRepo;
         this.extRepo = extRepo;
@@ -65,6 +68,7 @@ public class CapaService {
         this.appProps = appProps;
         this.jdbc = jdbc;
         this.audit = audit;
+        this.prService = prService;
     }
 
     // ---- 8D (Đợt d) ----
@@ -375,9 +379,10 @@ public class CapaService {
 
         String ncKeThuaSo = null;
         String ncKeThuaMuc = null;
+        Nc ncMoi = null;
         boolean moPr = failLan2;
         if (ncGoc != null) {
-            Nc ncMoi = ncService.taoNcKeThua(ncGoc, capa.getId());
+            ncMoi = ncService.taoNcKeThua(ncGoc, capa.getId());
             ncKeThuaSo = ncMoi.getSoHieu();
             ncKeThuaMuc = ncMoi.getMucNghiemTrong().name();
             // trần Nghiêm trọng → mở PR ngay
@@ -390,10 +395,32 @@ public class CapaService {
         audit.log("CAPA", String.valueOf(capa.getId()), "CHUYEN_TRANG_THAI",
                 CapaStatus.Monitoring.name(), CapaStatus.Ineffective.name(), lyDo, actor);
         if (moPr) {
-            audit.log("CAPA", String.valueOf(capa.getId()), "MO_PR", null, null,
+            // REQ 4.2/5/#13: fail lần 2 / trần Nghiêm trọng → BẮT BUỘC mở PR thật (không chỉ audit).
+            // NC kế thừa mang theo mã hàng + mã lỗi của NC gốc → mở PR cho đúng vấn đề đó.
+            moPrTuDong(capa.getId(), ncMoi != null ? ncMoi : ncGoc,
                     failLan2 ? "fail lần 2" : "trần Nghiêm trọng", actor);
         }
         return new IneffectiveResult(capa.getId(), ncKeThuaSo, ncKeThuaMuc, moPr, failLan2);
+    }
+
+    /**
+     * Nối cờ mở PR vào việc tạo PR THẬT qua {@link PrService#moTuDong} (idempotent: 1 PR/vấn đề).
+     * VẪN ghi audit {@code MO_PR} như cũ để tương thích báo cáo. BỌC try/catch: markIneffectiveInternal
+     * là luồng commit side-effect (được gọi cả từ "quá M lần dời hạn" — comment yêu cầu KHÔNG ném để
+     * tránh rollback việc đánh Ineffective). Nếu mở PR lỗi bất thường → ghi audit cảnh báo thay vì ném,
+     * để Ineffective không bị vỡ; chống trùng đã được {@code moTuDong} xử lý nên đường thường không ném.
+     */
+    private void moPrTuDong(Long capaId, Nc nc, String lyDo, String actor) {
+        try {
+            var pr = prService.moTuDong(LoaiThayDoi.QUY_TRINH_TB_SOP,
+                    nc.getMaHangChinh(), nc.getMaLoiChinh(), nc.getSoHieu(), capaId, actor);
+            String prRef = pr != null ? "PR#" + pr.getId() : "thiếu mã hàng/mã lỗi";
+            audit.log("CAPA", String.valueOf(capaId), "MO_PR", null,
+                    pr != null ? String.valueOf(pr.getId()) : null, lyDo + " · " + prRef, actor);
+        } catch (RuntimeException ex) {
+            audit.log("CAPA", String.valueOf(capaId), "MO_PR_LOI", null, null,
+                    lyDo + " · lỗi mở PR: " + ex.getMessage(), actor);
+        }
     }
 
     /** Fail lần 2 (vá 4.3): NC gốc của CAPA này có nc_ke_thua_tu_capa_id != null → đây là lần 2. */

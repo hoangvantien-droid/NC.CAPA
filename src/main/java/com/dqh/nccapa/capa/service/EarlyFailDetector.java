@@ -6,10 +6,12 @@ import com.dqh.nccapa.capa.repository.CapaRepository;
 import com.dqh.nccapa.capa.repository.CapaVerificationRepository;
 import com.dqh.nccapa.common.audit.AuditService;
 import com.dqh.nccapa.common.enums.CapaStatus;
+import com.dqh.nccapa.common.enums.LoaiThayDoi;
 import com.dqh.nccapa.common.enums.Severity;
 import com.dqh.nccapa.nc.entity.Nc;
 import com.dqh.nccapa.nc.repository.NcRepository;
 import com.dqh.nccapa.nc.service.EarlyFailHook;
+import com.dqh.nccapa.pr.service.PrService;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,15 +33,17 @@ public class EarlyFailDetector implements EarlyFailHook {
     private final CapaVerificationRepository verRepo;
     private final NcRepository ncRepo;
     private final AuditService audit;
+    private final PrService prService;
 
     public EarlyFailDetector(JdbcTemplate jdbc, CapaRepository capaRepo,
                              CapaVerificationRepository verRepo, NcRepository ncRepo,
-                             AuditService audit) {
+                             AuditService audit, PrService prService) {
         this.jdbc = jdbc;
         this.capaRepo = capaRepo;
         this.verRepo = verRepo;
         this.ncRepo = ncRepo;
         this.audit = audit;
+        this.prService = prService;
     }
 
     /**
@@ -92,7 +96,13 @@ public class EarlyFailDetector implements EarlyFailHook {
         audit.log("NC", ncMoi.getSoHieu(), "NANG_BAC_KE_THUA", mucGoc.name(), mucMoi.name(),
                 "fail sớm TH2 từ CAPA " + capaId, "SYSTEM");
         if (mucMoi == Severity.NGHIEM_TRONG) {
-            audit.log("CAPA", String.valueOf(capaId), "MO_PR", null, null, "trần Nghiêm trọng (TH2)", "SYSTEM");
+            // REQ 4.2/5/#13: trần Nghiêm trọng → BẮT BUỘC mở PR thật (cùng transaction với fail sớm).
+            // NC kế thừa (ncMoi) mang mã hàng + mã lỗi của NC gốc → mở PR cho đúng vấn đề; idempotent.
+            var pr = prService.moTuDong(LoaiThayDoi.QUY_TRINH_TB_SOP,
+                    ncMoi.getMaHangChinh(), ncMoi.getMaLoiChinh(), ncMoi.getSoHieu(), capaId, "SYSTEM");
+            audit.log("CAPA", String.valueOf(capaId), "MO_PR", null,
+                    pr != null ? String.valueOf(pr.getId()) : null,
+                    "trần Nghiêm trọng (TH2)" + (pr != null ? " · PR#" + pr.getId() : ""), "SYSTEM");
         }
         return true;
     }
