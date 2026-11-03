@@ -113,6 +113,88 @@
         </div>
       </section>
 
+      <!-- Cost of quality -->
+      <section class="card">
+        <h3>Cost of quality</h3>
+        <div class="body">
+          <div class="ratio">
+            <span class="big" th:text="${#numbers.formatDecimal(d.costOfQuality,0,'COMMA',0,'POINT')}">0</span>
+            <span class="muted">Tổng chi phí chất lượng</span>
+          </div>
+          <p class="muted" style="margin:10px 0 0;font-size:13px">
+            Chi phí NC <span th:text="${#numbers.formatDecimal(d.cophiNc,0,'COMMA',0,'POINT')}">0</span> ·
+            Đầu tư CAPA <span th:text="${#numbers.formatDecimal(d.cophiCapa,0,'COMMA',0,'POINT')}">0</span>
+          </p>
+        </div>
+      </section>
+
+      <!-- Tuổi NC đang mở & thời gian đóng TB -->
+      <section class="card">
+        <h3>Tuổi NC &amp; thời gian đóng</h3>
+        <div class="body">
+          <div class="ratio">
+            <span class="big" th:text="${d.tuoiTrungBinhMo != null} ? ${d.tuoiTrungBinhMo} + ' ngày' : '—'">—</span>
+            <span class="muted">Tuổi trung bình NC đang mở</span>
+          </div>
+          <div class="bars" style="margin-top:12px">
+            <div class="bar-row">
+              <span class="k">≤ 7 ngày</span>
+              <span class="bar-track"><span class="bar-fill"
+                    th:style="'width:' + ${#numbers.formatDecimal(d.tuoiMoDuoi7 * 100.0 / d.maxAge(),0,0)} + '%'"></span></span>
+              <span class="c" th:text="${d.tuoiMoDuoi7}">0</span>
+            </div>
+            <div class="bar-row">
+              <span class="k">8–30 ngày</span>
+              <span class="bar-track"><span class="bar-fill"
+                    th:style="'width:' + ${#numbers.formatDecimal(d.tuoiMo8Den30 * 100.0 / d.maxAge(),0,0)} + '%'"></span></span>
+              <span class="c" th:text="${d.tuoiMo8Den30}">0</span>
+            </div>
+            <div class="bar-row">
+              <span class="k">&gt; 30 ngày</span>
+              <span class="bar-track"><span class="bar-fill" th:classappend="'sev-NGHIEM_TRONG'"
+                    th:style="'width:' + ${#numbers.formatDecimal(d.tuoiMoTren30 * 100.0 / d.maxAge(),0,0)} + '%'"></span></span>
+              <span class="c" th:text="${d.tuoiMoTren30}">0</span>
+            </div>
+          </div>
+          <p class="muted" style="margin:10px 0 0;font-size:13px">
+            Thời gian đóng TB:
+            <span th:text="${d.thoiGianDongTrungBinh != null} ? ${d.thoiGianDongTrungBinh} + ' ngày' : 'chưa có NC đã đóng'">—</span>
+          </p>
+        </div>
+      </section>
+
+      <!-- Top mã lỗi -->
+      <section class="card">
+        <h3>Top mã lỗi</h3>
+        <div class="body">
+          <div class="bars">
+            <div class="bar-row" th:each="e : ${d.topMaLoi}">
+              <span class="k" th:text="${e.key}">—</span>
+              <span class="bar-track"><span class="bar-fill"
+                    th:style="'width:' + ${#numbers.formatDecimal(e.value * 100.0 / d.max(d.topMaLoi),0,0)} + '%'"></span></span>
+              <span class="c" th:text="${e.value}">0</span>
+            </div>
+            <p class="muted" th:if="${d.topMaLoi.isEmpty()}">Chưa có dữ liệu.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Top mã hàng tái diễn -->
+      <section class="card">
+        <h3>Top mã hàng tái diễn</h3>
+        <div class="body">
+          <div class="bars">
+            <div class="bar-row" th:each="e : ${d.topMaHang}">
+              <span class="k" th:text="${e.key}">—</span>
+              <span class="bar-track"><span class="bar-fill"
+                    th:style="'width:' + ${#numbers.formatDecimal(e.value * 100.0 / d.max(d.topMaHang),0,0)} + '%'"></span></span>
+              <span class="c" th:text="${e.value}">0</span>
+            </div>
+            <p class="muted" th:if="${d.topMaHang.isEmpty()}">Chưa có dữ liệu.</p>
+          </div>
+        </div>
+      </section>
+
       <!-- Theo nhà máy (chỉ khi không lọc) -->
       <section class="card" th:if="${!d.theoNhaMay.isEmpty()}">
         <h3>NC theo nhà máy</h3>
