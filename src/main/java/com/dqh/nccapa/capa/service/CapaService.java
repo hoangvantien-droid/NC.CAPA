@@ -141,9 +141,10 @@ public class CapaService {
         yeuCau(capa, CapaStatus.Investigating);
         boolean nang = mucNcGocCaoNhat(capaId).ordinalGte(Severity.NANG);
         if (nang) {
-            if (isBlank(req.rcaNoiDung) || isBlank(req.nhomNguyenNhan) || req.chiPhiDauTu == null) {
+            boolean coNhomNguyenNhan = !isBlank(req.nhomNguyenNhan) || req.nhomNguyenNhan6m != null;
+            if (isBlank(req.rcaNoiDung) || !coNhomNguyenNhan || req.chiPhiDauTu == null) {
                 throw BusinessException.businessRule(
-                        "NC Nặng trở lên: cần RCA + nhóm nguyên nhân + chi phí đầu tư", "rcaNoiDung");
+                        "NC Nặng trở lên: cần RCA (kết luận) + nhóm nguyên nhân (6M hoặc mô tả) + chi phí đầu tư", "rcaNoiDung");
             }
         }
         capa.setRcaNoiDung(req.rcaNoiDung);
