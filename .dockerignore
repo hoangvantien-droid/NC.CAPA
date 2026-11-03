@@ -3,3 +3,4 @@ target/
 .github/
 *.md
 .gitignore
+uploads/

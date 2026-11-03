@@ -5,6 +5,7 @@ import com.dqh.nccapa.attachment.service.AttachmentService;
 import com.dqh.nccapa.common.error.ApiResponse;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.InvalidMediaTypeException;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -45,13 +46,24 @@ public class AttachmentController {
     public ResponseEntity<Resource> download(@PathVariable("id") Long id) {
         AttachmentService.TaiVeResult kq = service.taiVe(id);
         Attachment att = kq.getAttachment();
-        String ct = att.getContentType() != null ? att.getContentType()
-                : MediaType.APPLICATION_OCTET_STREAM_VALUE;
+        MediaType mediaType = parseContentType(att.getContentType());
         String tenFile = URLEncoder.encode(att.getTenFile(), StandardCharsets.UTF_8).replace("+", "%20");
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION,
                         "attachment; filename*=UTF-8''" + tenFile)
-                .header(HttpHeaders.CONTENT_TYPE, ct)
+                .contentType(mediaType)
                 .body(kq.getResource());
+    }
+
+    /** Parse content-type an toàn: null/blank hoặc chuỗi lỗi định dạng → octet-stream. */
+    private static MediaType parseContentType(String ct) {
+        if (ct == null || ct.isBlank()) {
+            return MediaType.APPLICATION_OCTET_STREAM;
+        }
+        try {
+            return MediaType.parseMediaType(ct);
+        } catch (InvalidMediaTypeException e) {
+            return MediaType.APPLICATION_OCTET_STREAM;
+        }
     }
 }

@@ -29,9 +29,12 @@ services:
       DB_USER: nc_capa
       DB_PASS: nc_capa
       SEED_ENABLED: "true"
+      UPLOAD_DIR: /app/uploads
       TZ: Asia/Ho_Chi_Minh
     ports:
       - "8080:8080"
+    volumes:
+      - ./uploads:/app/uploads
 
 volumes:
   nc_capa_data:

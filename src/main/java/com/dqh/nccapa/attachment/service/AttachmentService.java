@@ -28,6 +28,24 @@ public class AttachmentService {
 
     private static final Set<String> DOI_TUONG_HOP_LE = Set.of("NC", "ACTION");
 
+    /** Mặc định khi content-type null → coi như generic octet-stream (không vỡ client cũ). */
+    private static final String CT_MAC_DINH = "application/octet-stream";
+
+    /** Whitelist content-type cho phép upload (loại chứng cứ phổ biến). */
+    private static final Set<String> CONTENT_TYPE_HOP_LE = Set.of(
+            "image/png",
+            "image/jpeg",
+            "image/gif",
+            "image/webp",
+            "application/pdf",
+            "text/plain",
+            "application/msword",
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            "application/vnd.ms-excel",
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "application/octet-stream"
+    );
+
     private final AttachmentRepository repo;
     private final AppProperties appProps;
 
@@ -62,6 +80,14 @@ public class AttachmentService {
             throw BusinessException.businessRule("File rỗng", "file");
         }
 
+        // Validate content-type: null → octet-stream (cho qua); ngoài whitelist → chặn.
+        String contentType = file.getContentType();
+        if (contentType == null || contentType.isBlank()) {
+            contentType = CT_MAC_DINH;
+        } else if (!CONTENT_TYPE_HOP_LE.contains(contentType)) {
+            throw BusinessException.businessRule("Loại file không được phép: " + contentType, "file");
+        }
+
         String tenGoc = file.getOriginalFilename() != null ? file.getOriginalFilename() : "file";
         String duoi = "";
         int dot = tenGoc.lastIndexOf('.');
@@ -80,7 +106,7 @@ public class AttachmentService {
 
         Attachment att = new Attachment(
                 doiTuong, doiTuongId, tenGoc, tenLuu,
-                file.getContentType(), file.getSize(), nguoiTai, LocalDateTime.now());
+                contentType, file.getSize(), nguoiTai, LocalDateTime.now());
         return repo.save(att);
     }
 
