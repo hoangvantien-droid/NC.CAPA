@@ -47,6 +47,7 @@ public class NcService {
     private final AuditService audit;
     private final CapaClosureChecker capaClosureChecker;
     private final EarlyFailHook earlyFailHook;
+    private final RecurrenceHook recurrenceHook;
     private final TicketCallbackHook ticketCallbackHook;
     private final AppProperties appProps;
 
@@ -54,6 +55,7 @@ public class NcService {
                      NcDoiTuongRepository doiTuongRepo, DefectCatalogService defectCatalog,
                      SequenceGenerator sequence, AuditService audit,
                      CapaClosureChecker capaClosureChecker, EarlyFailHook earlyFailHook,
+                     RecurrenceHook recurrenceHook,
                      TicketCallbackHook ticketCallbackHook, AppProperties appProps) {
         this.ncRepo = ncRepo;
         this.chiTieuRepo = chiTieuRepo;
@@ -63,6 +65,7 @@ public class NcService {
         this.audit = audit;
         this.capaClosureChecker = capaClosureChecker;
         this.earlyFailHook = earlyFailHook;
+        this.recurrenceHook = recurrenceHook;
         this.ticketCallbackHook = ticketCallbackHook;
         this.appProps = appProps;
     }
@@ -121,6 +124,7 @@ public class NcService {
 
         audit.log("NC", soHieu, "TAO_NC", null, mucPhieu.name(), null, req.nguoiBaoCao);
         earlyFailHook.onNewNc(nc);   // TH2 fail sớm nếu trùng (mã hàng+mã lỗi) với CAPA đang Monitoring
+        recurrenceHook.onNewNc(nc);  // tái diễn lần 3 cùng (mã hàng+mã lỗi) trong rolling window 90 ngày → mở PR
         return nc;
     }
 
