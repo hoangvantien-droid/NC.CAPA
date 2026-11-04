@@ -248,3 +248,57 @@ dl.kv dd{margin:0}
 @media (max-width:720px){
   .quyen-badge{flex:1 1 100%;justify-content:center;margin-top:4px}
 }
+
+/* ===== Modal form dùng chung (thao tác NC/CAPA/PR) ===== */
+body.modal-open{overflow:hidden}
+.modal-overlay{
+  position:fixed;inset:0;z-index:1000;
+  background:rgba(21,60,110,.45);
+  display:flex;align-items:center;justify-content:center;
+  padding:20px;
+}
+.modal-overlay[hidden]{display:none}
+.modal{
+  width:100%;max-width:520px;max-height:calc(100vh - 40px);
+  display:flex;flex-direction:column;
+  background:var(--card);border:1px solid var(--line);border-radius:var(--r);
+  box-shadow:0 10px 40px -8px rgba(15,23,42,.35);overflow:hidden;
+}
+.modal-head{
+  display:flex;align-items:center;gap:10px;
+  padding:14px 18px;border-bottom:1px solid var(--line);background:#f8fafc;
+}
+.modal-title{margin:0;font-size:15px;font-weight:700;color:var(--navy);flex:1}
+.modal-x{
+  border:none;background:none;cursor:pointer;
+  font-size:22px;line-height:1;color:var(--muted);padding:0 4px;
+}
+.modal-x:hover{color:var(--ink)}
+.modal-body{padding:18px;overflow-y:auto}
+.modal-field{margin-bottom:14px}
+.modal-field > label{display:block;font-size:13.5px;color:var(--muted);margin-bottom:6px}
+.modal-field .req{color:var(--bad);font-weight:700}
+.modal-field input,.modal-field select,.modal-field textarea{
+  width:100%;font:inherit;padding:9px 11px;
+  border:1px solid var(--line2);border-radius:7px;background:#fff;color:var(--ink);
+}
+.modal-field textarea{min-height:78px;resize:vertical}
+.modal-field input:focus,.modal-field select:focus,.modal-field textarea:focus{
+  outline:none;border-color:var(--navy2);box-shadow:0 0 0 3px var(--brand-ll);
+}
+.modal-field input.invalid,.modal-field select.invalid,.modal-field textarea.invalid{
+  border-color:var(--bad);box-shadow:0 0 0 3px var(--bad-l);
+}
+.modal-check{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--ink2)}
+.modal-check input{width:auto}
+.modal-field-error{margin:5px 0 0;font-size:12.5px;color:var(--bad)}
+.modal-form-error{
+  margin:0 0 4px;padding:9px 11px;border-radius:7px;
+  background:var(--bad-l);border:1px solid var(--bad);color:var(--bad-t);
+  font-size:13px;font-weight:600;
+}
+.modal-foot{
+  display:flex;justify-content:flex-end;gap:10px;
+  padding:14px 18px;border-top:1px solid var(--line);background:#f8fafc;
+}
+.modal-foot .btn[disabled]{opacity:.6;cursor:default}

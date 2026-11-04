@@ -139,91 +139,147 @@
   </div>
   </div>
 
+  <div th:replace="~{fragments/action-modal :: modal}"></div>
+
   <script th:inline="javascript">
     // Context path (prod: '/nc-capa/', local: '/'); @{/} tự thêm context path.
     window.CTX = (/*[[@{/}]]*/ '/').split(';')[0];
+    // actor mặc định LẤY TỪ tài khoản hiện tại (bơm từ view); cho phép sửa trong modal.
+    window.CAPA_ACTOR = /*[[${currentUser != null ? currentUser.username() : 'qademo'}]]*/ 'qademo';
   </script>
   <script th:inline="none">
-    function post(url, body, after){
+    // Gọi API nghiệp vụ qua MODAL FORM dùng chung (không còn prompt/confirm từng mục).
+    var currentActor = window.CAPA_ACTOR || 'qademo';
+    function actorField(){
+      return { label:'Người thực hiện (username)', name:'actor', type:'text', required:true, default:currentActor };
+    }
+
+    function post(url, body, api, after){
       fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) })
         .then(function(r){ return r.json(); })
         .then(function(res){ if(res.success){ (after||function(){location.reload();})(res); }
-          else { alert('Không thực hiện được: ' + (res.error ? res.error.message : 'lỗi')); } })
-        .catch(function(e){ alert('Lỗi mạng: '+e); });
+          else { api.serverError('Không thực hiện được: ' + (res.error ? res.error.message : 'lỗi')); } })
+        .catch(function(e){ api.serverError('Lỗi mạng: ' + e); });
     }
+
+    // SCHEMA theo từng data-action. Giữ ĐÚNG tên field JSON + endpoint hiện có.
+    // endpoint mặc định: api/v1/capa/{id}/{action}; một số action có endpoint riêng (xem overrides).
+    var CAPA_SCHEMAS = {
+      'to-investigating': { title:'Chuyển sang Điều tra', fields:[
+        { label:'Mục tiêu điều tra', name:'khMucTieu', type:'text' },
+        { label:'Phương pháp', name:'khPhuongPhap', type:'text' },
+        { label:'Nguồn lực', name:'khNguonLuc', type:'text' },
+        actorField() ] },
+      'to-action-plan': { title:'Lập kế hoạch hành động', fields:[
+        { label:'Công cụ RCA', name:'rcaMethod', type:'select', default:'FIVE_WHY',
+          options:['FIVE_WHY','FISHBONE','IS_IS_NOT'] },
+        { label:'Nội dung RCA (JSON/text)', name:'rcaData', type:'textarea', default:'{"w1":"","w2":"","w3":""}' },
+        { label:'Kết luận nguyên nhân gốc', name:'rcaNoiDung', type:'textarea' },
+        { label:'Nhóm nguyên nhân (6M)', name:'nhomNguyenNhan6m', type:'select', default:'METHOD',
+          options:['MAN','MACHINE','MATERIAL','METHOD','MEASURE','ENVIRONMENT'] },
+        { label:'Vấn đề có tái diễn?', name:'taiDien', type:'checkbox', default:false },
+        { label:'Chi phí đầu tư', name:'chiPhiDauTu', type:'number', min:0, default:0 },
+        actorField() ] },
+      'to-processing': { title:'Chuyển sang Xử lý', fields:[
+        { label:'Khắc phục tức thời', name:'khacPhucTucThoi', type:'textarea' },
+        { label:'Ngăn tái diễn', name:'nganTaiDien', type:'textarea' },
+        actorField() ] },
+      'to-monitoring': { title:'Chuyển sang Theo dõi', fields:[
+        { label:'X ngày', name:'xNgay', type:'number', required:true, min:1, default:30 },
+        { label:'N lô (0 nếu nhóm N=0)', name:'nLo', type:'number', min:0, default:0 },
+        actorField() ] },
+      'postpone-reminder': { title:'Dời hạn nhắc', fields:[
+        { label:'Dời thêm (ngày)', name:'soNgayDoiThem', type:'number', min:0, default:7 },
+        { label:'Lý do', name:'lyDo', type:'text' },
+        actorField() ] },
+      'confirm-effective': { title:'Xác nhận hiệu quả', fields:[
+        { label:'Biên bản kiểm tra (nếu N=0)', name:'bienBanKiemTra', type:'text' },
+        actorField() ] },
+      'mark-ineffective': { title:'Đánh dấu không hiệu quả', fields:[
+        { label:'Lý do không hiệu quả', name:'lyDo', type:'text', required:true },
+        actorField() ] },
+      'add-action': { title:'Thêm action', fields:[
+        { label:'Loại', name:'loai', type:'select', default:'NGAN_TAI_DIEN',
+          options:['TUC_THOI','NGAN_TAI_DIEN'] },
+        { label:'Loại hành động', name:'loaiHanhDong', type:'select', default:'CORRECTIVE',
+          options:['CORRECTIVE','PREVENTIVE'] },
+        { label:'Mô tả', name:'moTa', type:'textarea', required:true },
+        { label:'Người phụ trách', name:'nguoiPhuTrach', type:'text', required:true, default:'sx' },
+        { label:'Hạn (deadline)', name:'deadline', type:'date', required:true },
+        actorField() ] },
+      'sua-ket-qua': { title:'Sửa kết quả kiểm chứng', fields:[
+        { label:'Kết quả', name:'ketQua', type:'select', default:'HIEU_QUA',
+          options:['HIEU_QUA','KHONG_HIEU_QUA'] },
+        { label:'Biên bản kiểm tra (tuỳ chọn)', name:'bienBanKiemTra', type:'text' },
+        { label:'Lý do', name:'lyDo', type:'text' },
+        actorField() ] }
+    };
+    // Action dùng endpoint khác api/v1/capa/{id}/{action}.
+    var CAPA_ENDPOINT = {
+      'add-action': function(id){ return CTX + 'api/v1/capa/'+id+'/actions'; },
+      'sua-ket-qua': function(id){ return CTX + 'api/v1/capa/'+id+'/verification/sua-ket-qua'; }
+    };
+
     document.querySelectorAll('button[data-action]').forEach(function(btn){
       btn.addEventListener('click', function(){
         var a = btn.getAttribute('data-action');
         var id = btn.getAttribute('data-id');
-        var actor = prompt('Người thực hiện:', 'qademo'); if(!actor) return;
-        var body = { actor: actor };
-        if(a==='to-investigating'){
-          body.khMucTieu = prompt('Mục tiêu điều tra (bắt buộc nếu NC Nặng+):','');
-          body.khPhuongPhap = prompt('Phương pháp:','');
-          body.khNguonLuc = prompt('Nguồn lực:','');
-        }
-        if(a==='to-action-plan'){
-          body.rcaMethod = prompt('Công cụ RCA (FIVE_WHY/FISHBONE/IS_IS_NOT):','FIVE_WHY');
-          body.rcaData = prompt('Nội dung RCA (JSON hoặc text, vd 5-Why):','{"w1":"","w2":"","w3":""}');
-          body.rcaNoiDung = prompt('Kết luận nguyên nhân gốc:','');
-          body.nhomNguyenNhan6m = prompt('Nhóm nguyên nhân 6M (MAN/MACHINE/MATERIAL/METHOD/MEASURE/ENVIRONMENT):','METHOD');
-          body.taiDien = confirm('Vấn đề có tái diễn không? (OK = Có)');
-          body.chiPhiDauTu = Number(prompt('Chi phí đầu tư:','0'));
-        }
-        if(a==='to-processing'){ body.khacPhucTucThoi=prompt('Khắc phục tức thời:',''); body.nganTaiDien=prompt('Ngăn tái diễn:',''); }
-        if(a==='to-monitoring'){ body.xNgay=Number(prompt('X ngày:','30')); body.nLo=Number(prompt('N lô (0 nếu nhóm N=0):','0')); }
-        if(a==='postpone-reminder'){ body.soNgayDoiThem=Number(prompt('Dời thêm (ngày):','7')); body.lyDo=prompt('Lý do:',''); }
-        if(a==='confirm-effective'){ body.bienBanKiemTra=prompt('Biên bản kiểm tra (nếu N=0):',''); }
-        if(a==='mark-ineffective'){ body.lyDo=prompt('Lý do không hiệu quả:',''); }
-        if(a==='add-action'){
-          var lo=prompt('Loại (TUC_THOI/NGAN_TAI_DIEN):','NGAN_TAI_DIEN');
-          var cat=prompt('Loại hành động (CORRECTIVE/PREVENTIVE):','CORRECTIVE');
-          post(CTX + 'api/v1/capa/'+id+'/actions', { actor:actor, loai:lo, loaiHanhDong:cat, moTa:prompt('Mô tả:',''), nguoiPhuTrach:prompt('Phụ trách:','sx'), deadline:prompt('Hạn (YYYY-MM-DD):','2026-12-31') });
-          return;
-        }
-        if(a==='sua-ket-qua'){
-          body.ketQua = prompt('Kết quả mới (HIEU_QUA/KHONG_HIEU_QUA):','HIEU_QUA');
-          body.bienBanKiemTra = prompt('Biên bản kiểm tra (tuỳ chọn):','');
-          body.lyDo = prompt('Lý do sửa:','');
-          post(CTX + 'api/v1/capa/'+id+'/verification/sua-ket-qua', body);
-          return;
-        }
-        post(CTX + 'api/v1/capa/'+id+'/'+a, body);
+        var schema = CAPA_SCHEMAS[a] || { title:(btn.textContent||'Thao tác').trim(), fields:[ actorField() ] };
+        var url = CAPA_ENDPOINT[a] ? CAPA_ENDPOINT[a](id) : (CTX + 'api/v1/capa/'+id+'/'+a);
+        ActionModal.open({
+          title: schema.title,
+          fields: schema.fields,
+          onSubmit: function(body, api){ post(url, body, api); }
+        });
       });
     });
+
     document.querySelectorAll('button[data-complete]').forEach(function(btn){
       btn.addEventListener('click', function(){
         var aid = btn.getAttribute('data-complete');
-        var actor = prompt('Người thực hiện:','sx'); if(!actor) return;
-        post(CTX + 'api/v1/capa/actions/'+aid+'/complete', { actor:actor, bangChung:prompt('Bằng chứng:','') });
+        ActionModal.open({
+          title: 'Hoàn thành action #' + aid,
+          fields: [
+            { label:'Bằng chứng', name:'bangChung', type:'text' },
+            actorField() ],
+          onSubmit: function(body, api){ post(CTX + 'api/v1/capa/actions/'+aid+'/complete', body, api); }
+        });
       });
     });
-    // Đính kèm file cho action (Nhóm 2): liệt kê + upload nhanh.
+
+    // Đính kèm file cho action (Nhóm 2): liệt kê danh sách + upload qua modal (bỏ prompt/confirm).
     document.querySelectorAll('button[data-att-action]').forEach(function(btn){
       btn.addEventListener('click', function(){
         var aid = btn.getAttribute('data-att-action');
         var q = '?doiTuong=ACTION&doiTuongId=' + encodeURIComponent(aid);
         fetch(CTX + 'api/v1/attachment' + q).then(function(r){ return r.json(); }).then(function(res){
           var items = (res.success && res.data) ? res.data : [];
-          var ds = items.map(function(x){ return '• ' + x.tenFile + '  (' + window.location.origin + CTX + 'api/v1/attachment/' + x.id + '/download)'; }).join('\n');
-          alert('File của action #' + aid + ':\n' + (ds || '(chưa có)'));
-          if(!confirm('Tải lên file mới cho action #' + aid + '?')) return;
-          var input = document.createElement('input');
-          input.type = 'file';
-          input.onchange = function(){
-            if(!input.files || input.files.length === 0) return;
-            var actor = prompt('Người tải:', 'qademo'); if(!actor) return;
-            var fd = new FormData();
-            fd.append('doiTuong', 'ACTION');
-            fd.append('doiTuongId', aid);
-            fd.append('file', input.files[0]);
-            fd.append('actor', actor);
-            fetch(CTX + 'api/v1/attachment', { method:'POST', body: fd })
-              .then(function(r){ return r.json(); })
-              .then(function(r){ if(r.success){ alert('Đã tải lên.'); } else { alert('Không tải được: ' + (r.error ? r.error.message : 'lỗi')); } })
-              .catch(function(e){ alert('Lỗi mạng: '+e); });
-          };
-          input.click();
+          var ds = items.length
+            ? items.map(function(x){ return '• ' + x.tenFile; }).join('\n')
+            : '(chưa có file)';
+          ActionModal.open({
+            title: 'Đính kèm file — action #' + aid,
+            fields: [
+              { label:'File hiện có', name:'_dsFile', type:'textarea', default: ds },
+              { label:'Chọn file tải lên', name:'file', type:'file', required:true },
+              actorField() ],
+            onSubmit: function(body, api){
+              var fileEl = document.getElementById('mf-file');
+              if(!fileEl || !fileEl.files || fileEl.files.length === 0){ api.serverError('Chọn file trước.'); return; }
+              var fd = new FormData();
+              fd.append('doiTuong', 'ACTION');
+              fd.append('doiTuongId', aid);
+              fd.append('file', fileEl.files[0]);
+              fd.append('actor', body.actor);
+              fetch(CTX + 'api/v1/attachment', { method:'POST', body: fd })
+                .then(function(r){ return r.json(); })
+                .then(function(r){ if(r.success){ api.close(); } else { api.serverError('Không tải được: ' + (r.error ? r.error.message : 'lỗi')); } })
+                .catch(function(e){ api.serverError('Lỗi mạng: ' + e); });
+            }
+          });
+          // Khoá vùng hiển thị danh sách (chỉ để xem), không gửi lên server.
+          var dsEl = document.getElementById('mf-_dsFile');
+          if(dsEl){ dsEl.readOnly = true; dsEl.style.background = '#f8fafc'; }
         }).catch(function(e){ alert('Lỗi mạng: '+e); });
       });
     });

@@ -176,43 +176,78 @@
   </div>
   </div>
 
+  <div th:replace="~{fragments/action-modal :: modal}"></div>
+
   <script th:inline="javascript">
     // Context path (prod: '/nc-capa/', local: '/'); @{/} tự thêm context path.
     window.CTX = (/*[[@{/}]]*/ '/').split(';')[0];
   </script>
   <script th:inline="none">
-    // Gọi API nghiệp vụ. actor LẤY TỪ tài khoản demo hiện tại (session) để demo SoD;
-    // vẫn cho sửa qua prompt nếu cần. Các field khác (lý do/chi phí) nhập nhanh qua prompt.
+    // Gọi API nghiệp vụ qua MODAL FORM dùng chung (không còn prompt/confirm từng mục).
+    // actor LẤY TỪ tài khoản demo hiện tại (data-actor) và hiển thị thành field cho sửa.
     var actionsBox = document.querySelector('.actions');
     var currentActor = (actionsBox && actionsBox.getAttribute('data-actor')) || 'qademo';
+
+    function actorField(){
+      return { label:'Người thực hiện (username)', name:'actor', type:'text', required:true, default:currentActor };
+    }
+
+    // SCHEMA field theo từng data-action của nc-detail. Giữ ĐÚNG tên field JSON + endpoint.
+    var NC_SCHEMAS = {
+      'escalate': { title:'Nâng mức nghiêm trọng', fields:[
+        { label:'Mức mới', name:'mucMoi', type:'select', default:'NANG',
+          options:[{value:'NANG',label:'Nặng'},{value:'NGHIEM_TRONG',label:'Nghiêm trọng'}] },
+        { label:'Lý do', name:'lyDo', type:'text', required:true },
+        actorField() ] },
+      'reject': { title:'Từ chối phiếu', fields:[
+        { label:'Lý do từ chối', name:'lyDo', type:'text', required:true }, actorField() ] },
+      'cancel': { title:'Huỷ phiếu', fields:[
+        { label:'Lý do huỷ phiếu', name:'lyDo', type:'text', required:true }, actorField() ] },
+      'close-fast': { title:'Đóng nhanh', fields:[
+        { label:'Kết quả xử lý', name:'ketQuaXuLy', type:'textarea', required:true }, actorField() ] },
+      'confirm-done': { title:'Xác nhận hoàn thành', fields:[
+        { label:'Bằng chứng', name:'bangChung', type:'text', required:true },
+        { label:'Chi phí thực tế', name:'chiPhiThucTe', type:'number', required:true, min:0, default:0 },
+        actorField() ] },
+      'verify-close': { title:'Thẩm tra & đóng', fields:[
+        { label:'Kết luận thẩm tra', name:'ketLuanThamTra', type:'textarea', required:true }, actorField() ] },
+      'submit-approval': { title:'Trình phê duyệt disposition', fields:[
+        { label:'Nguyên nhân sơ bộ', name:'nguyenNhanSoBo', type:'textarea', required:true },
+        { label:'Disposition đề xuất', name:'dispositionDeXuat', type:'select', default:'REWORK',
+          options:['REWORK','RETURN_NCC','HA_CAP','TAI_CHE','TIEU_HUY'] },
+        { label:'Chi phí ước tính', name:'chiPhiUocTinh', type:'number', required:true, min:0, default:0 },
+        { label:'Bộ phận thực hiện', name:'boPhanThucHien', type:'text', required:true, default:'SX' },
+        actorField() ] }
+    };
+
+    function postNc(so, action, body, api){
+      fetch(CTX + 'api/v1/nc/'+encodeURIComponent(so)+'/'+action, {
+        method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)
+      }).then(function(r){ return r.json(); }).then(function(res){
+        if(res.success){
+          if(action==='capa' && res.data && res.data.id){ location.href = CTX + 'capa/' + res.data.id; }
+          else { location.reload(); }
+        } else {
+          api.serverError('Không thực hiện được: ' + (res.error ? res.error.message : 'lỗi'));
+        }
+      }).catch(function(e){ api.serverError('Lỗi mạng: ' + e); });
+    }
+
     document.querySelectorAll('button[data-action]').forEach(function(btn){
       btn.addEventListener('click', function(){
         var action = btn.getAttribute('data-action');
         var so = btn.getAttribute('data-so');
-        var actor = prompt('Người thực hiện (username):', currentActor);
-        if(!actor) return;
-        var body = { actor: actor };
-        if(action==='escalate'){ body.mucMoi = prompt('Mức mới (NANG/NGHIEM_TRONG):','NANG'); body.lyDo = prompt('Lý do:',''); }
-        if(action==='reject'){ body.lyDo = prompt('Lý do từ chối:',''); }
-        if(action==='cancel'){ body.lyDo = prompt('Lý do hủy phiếu:',''); }
-        if(action==='close-fast'){ body.ketQuaXuLy = prompt('Kết quả xử lý:',''); }
-        if(action==='confirm-done'){ body.bangChung = prompt('Bằng chứng:',''); body.chiPhiThucTe = Number(prompt('Chi phí thực tế:','0')); }
-        if(action==='verify-close'){ body.ketLuanThamTra = prompt('Kết luận thẩm tra:',''); }
-        if(action==='submit-approval'){
-          body.nguyenNhanSoBo = prompt('Nguyên nhân sơ bộ:','');
-          body.dispositionDeXuat = prompt('Disposition (REWORK/RETURN_NCC/HA_CAP/TAI_CHE/TIEU_HUY):','REWORK');
-          body.chiPhiUocTinh = Number(prompt('Chi phí ước tính:','0'));
-          body.boPhanThucHien = prompt('Bộ phận thực hiện:','SX');
+        var schema = NC_SCHEMAS[action];
+        if(!schema){
+          // Action không cần trường bổ sung (vd: capa, resubmit, containment/unhold làm qua cơ chế khác):
+          // mở modal chỉ hỏi actor để giữ luồng gọi, không còn prompt.
+          schema = { title: (btn.textContent || 'Thao tác').trim(), fields:[ actorField() ] };
         }
-        fetch(CTX + 'api/v1/nc/'+encodeURIComponent(so)+'/'+action, {
-          method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)
-        }).then(function(r){ return r.json(); }).then(function(res){
-          if(res.success){
-            if(action==='capa' && res.data && res.data.id){ location.href = CTX + 'capa/' + res.data.id; }
-            else { location.reload(); }
-          }
-          else { alert('Không thực hiện được: ' + (res.error ? res.error.message : 'lỗi')); }
-        }).catch(function(e){ alert('Lỗi mạng: '+e); });
+        ActionModal.open({
+          title: schema.title,
+          fields: schema.fields,
+          onSubmit: function(body, api){ postNc(so, action, body, api); }
+        });
       });
     });
 
@@ -254,8 +289,8 @@
       formEl.addEventListener('submit', function(e){
         e.preventDefault();
         if(!fileEl.files || fileEl.files.length === 0){ alert('Chọn file trước.'); return; }
-        var actor = prompt('Người tải (username):', 'qademo');
-        if(!actor) return;
+        // actor LẤY TỪ tài khoản hiện tại (bỏ prompt hỏi người tải).
+        var actor = currentActor;
         var fd = new FormData();
         fd.append('doiTuong', 'NC');
         fd.append('doiTuongId', soHieu);

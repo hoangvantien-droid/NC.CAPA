@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<body>
+<!--
+  Modal form DÙNG CHUNG cho nc-detail / capa-detail / pr-detail.
+  - Markup overlay + hộp thoại trung tâm; đóng bằng nút Huỷ / click overlay / phím Esc.
+  - JS cung cấp window.ActionModal với các hàm open/close/validate/submit, dựng form từ SCHEMA
+    (label, name, type, options, required, default). Mỗi trang tự định nghĩa schema của mình
+    rồi gọi ActionModal.open(...). KHÔNG thêm thư viện ngoài.
+  Nhúng bằng: <div th:replace="~{fragments/action-modal :: modal}"></div>
+-->
+<div th:fragment="modal">
+  <div id="action-modal-overlay" class="modal-overlay" hidden>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+      <div class="modal-head">
+        <h3 id="modal-title" class="modal-title">Thao tác</h3>
+        <button type="button" class="modal-x" data-modal-close aria-label="Đóng">×</button>
+      </div>
+      <form id="action-modal-form" class="modal-body" novalidate>
+        <div id="action-modal-fields"></div>
+        <p id="action-modal-error" class="modal-form-error" hidden></p>
+      </form>
+      <div class="modal-foot">
+        <button type="button" class="btn" data-modal-close>Huỷ</button>
+        <button type="submit" form="action-modal-form" class="btn btn-primary" id="action-modal-submit">Xác nhận</button>
+      </div>
+    </div>
+  </div>
+
+  <script th:inline="none">
+    // ====== ActionModal: engine modal form dùng chung (thuần JS) ======
+    window.ActionModal = (function(){
+      var overlay = document.getElementById('action-modal-overlay');
+      var titleEl = document.getElementById('modal-title');
+      var fieldsEl = document.getElementById('action-modal-fields');
+      var errorEl = document.getElementById('action-modal-error');
+      var formEl = document.getElementById('action-modal-form');
+      var submitBtn = document.getElementById('action-modal-submit');
+      var current = null; // { schema, onSubmit }
+
+      function esc(s){
+        return String(s == null ? '' : s)
+          .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+          .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+      }
+
+      // Dựng một field từ định nghĩa schema. Trả về phần tử .modal-field.
+      function buildField(f){
+        var wrap = document.createElement('div');
+        wrap.className = 'modal-field';
+        var fid = 'mf-' + f.name;
+        var req = f.required ? ' <span class="req">*</span>' : '';
+        if(f.type === 'checkbox'){
+          var lab = document.createElement('label');
+          lab.className = 'modal-check';
+          lab.innerHTML = '<input type="checkbox" id="' + fid + '" ' + (f.default ? 'checked' : '') + '/>'
+            + '<span>' + esc(f.label) + '</span>';
+          wrap.appendChild(lab);
+          wrap.appendChild(errLine(f.name));
+          return wrap;
+        }
+        var labelHtml = '<label for="' + fid + '">' + esc(f.label) + req + '</label>';
+        var control;
+        if(f.type === 'textarea'){
+          control = '<textarea id="' + fid + '" data-name="' + esc(f.name) + '">'
+            + esc(f.default || '') + '</textarea>';
+        } else if(f.type === 'select'){
+          var opts = (f.options || []).map(function(o){
+            var val = (typeof o === 'object') ? o.value : o;
+            var txt = (typeof o === 'object') ? o.label : o;
+            var sel = (String(val) === String(f.default)) ? ' selected' : '';
+            return '<option value="' + esc(val) + '"' + sel + '>' + esc(txt) + '</option>';
+          }).join('');
+          control = '<select id="' + fid + '" data-name="' + esc(f.name) + '">' + opts + '</select>';
+        } else if(f.type === 'file'){
+          control = '<input type="file" id="' + fid + '" data-name="' + esc(f.name) + '"/>';
+        } else {
+          // text / number / date
+          var t = (f.type === 'number' || f.type === 'date') ? f.type : 'text';
+          var extra = (f.type === 'number' && f.min != null) ? (' min="' + esc(f.min) + '"') : '';
+          control = '<input type="' + t + '" id="' + fid + '" data-name="' + esc(f.name) + '"'
+            + extra + ' value="' + esc(f.default == null ? '' : f.default) + '"/>';
+        }
+        wrap.innerHTML = labelHtml + control;
+        wrap.appendChild(errLine(f.name));
+        return wrap;
+      }
+
+      function errLine(name){
+        var e = document.createElement('p');
+        e.className = 'modal-field-error';
+        e.setAttribute('data-err-for', name);
+        e.hidden = true;
+        return e;
+      }
+
+      function controlOf(name){
+        return fieldsEl.querySelector('[data-name="' + name + '"], #mf-' + name);
+      }
+
+      function valueOf(f){
+        var el = controlOf(f.name);
+        if(!el) return undefined;
+        if(f.type === 'checkbox') return el.checked;
+        if(f.type === 'file') return (el.files && el.files.length) ? el.files[0] : null;
+        if(f.type === 'number'){
+          var raw = el.value.trim();
+          if(raw === '') return null;
+          return Number(raw);
+        }
+        return el.value;
+      }
+
+      function clearErrors(){
+        errorEl.hidden = true; errorEl.textContent = '';
+        fieldsEl.querySelectorAll('.modal-field-error').forEach(function(e){ e.hidden = true; e.textContent=''; });
+        fieldsEl.querySelectorAll('.invalid').forEach(function(e){ e.classList.remove('invalid'); });
+      }
+
+      function showFieldError(name, msg){
+        var err = fieldsEl.querySelector('[data-err-for="' + name + '"]');
+        if(err){ err.textContent = msg; err.hidden = false; }
+        var ctl = controlOf(name);
+        if(ctl){ ctl.classList.add('invalid'); }
+      }
+
+      // Validate các trường bắt buộc; trả về object body nếu hợp lệ, null nếu có lỗi.
+      function collect(){
+        clearErrors();
+        var body = {};
+        var firstBad = null;
+        current.schema.fields.forEach(function(f){
+          var v = valueOf(f);
+          if(f.required){
+            var empty = (f.type === 'number') ? (v == null || isNaN(v))
+                       : (f.type === 'checkbox') ? false
+                       : (f.type === 'file') ? (v == null)
+                       : (v == null || String(v).trim() === '');
+            if(empty){
+              showFieldError(f.name, 'Trường bắt buộc.');
+              if(!firstBad) firstBad = f.name;
+              return;
+            }
+          }
+          if(f.type === 'number' && v != null && !isNaN(v) && f.min != null && v < f.min){
+            showFieldError(f.name, 'Giá trị phải ≥ ' + f.min + '.');
+            if(!firstBad) firstBad = f.name;
+            return;
+          }
+          // File gửi qua multipart riêng (onSubmit tự lấy từ input); không đưa vào body JSON.
+          if(f.type !== 'file') body[f.name] = v;
+        });
+        if(firstBad){
+          var el = controlOf(firstBad); if(el) el.focus();
+          return null;
+        }
+        return body;
+      }
+
+      function open(opts){
+        // opts: { title, fields:[...], onSubmit: function(body, modalApi) }
+        current = { schema: { fields: opts.fields || [] }, onSubmit: opts.onSubmit };
+        titleEl.textContent = opts.title || 'Thao tác';
+        fieldsEl.innerHTML = '';
+        current.schema.fields.forEach(function(f){ fieldsEl.appendChild(buildField(f)); });
+        clearErrors();
+        submitBtn.disabled = false;
+        overlay.hidden = false;
+        document.body.classList.add('modal-open');
+        var first = fieldsEl.querySelector('input,select,textarea');
+        if(first) setTimeout(function(){ first.focus(); }, 0);
+      }
+
+      function close(){
+        overlay.hidden = true;
+        document.body.classList.remove('modal-open');
+        fieldsEl.innerHTML = '';
+        current = null;
+      }
+
+      // Hiện lỗi server trong modal (không đóng) để sửa lại.
+      function serverError(msg){
+        errorEl.textContent = msg || 'Có lỗi xảy ra.';
+        errorEl.hidden = false;
+        submitBtn.disabled = false;
+      }
+
+      formEl.addEventListener('submit', function(e){
+        e.preventDefault();
+        if(!current) return;
+        var body = collect();
+        if(body === null) return;
+        submitBtn.disabled = true;
+        current.onSubmit(body, { close: close, serverError: serverError });
+      });
+
+      overlay.addEventListener('mousedown', function(e){ if(e.target === overlay) close(); });
+      overlay.querySelectorAll('[data-modal-close]').forEach(function(b){
+        b.addEventListener('click', close);
+      });
+      document.addEventListener('keydown', function(e){
+        if(e.key === 'Escape' && !overlay.hidden) close();
+      });
+
+      return { open: open, close: close, serverError: serverError };
+    })();
+  </script>
+</div>
+</body>
+</html>

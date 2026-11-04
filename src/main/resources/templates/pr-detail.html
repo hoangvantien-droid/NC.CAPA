@@ -118,24 +118,49 @@
   </div>
   </div>
 
+  <div th:replace="~{fragments/action-modal :: modal}"></div>
+
   <script th:inline="javascript">
     // Context path (prod: '/nc-capa/', local: '/'); @{/} tự thêm context path.
     window.CTX = (/*[[@{/}]]*/ '/').split(';')[0];
+    // actor mặc định LẤY TỪ tài khoản hiện tại (bơm từ view); cho phép sửa trong modal.
+    window.PR_ACTOR = /*[[${currentUser != null ? currentUser.username() : 'qademo'}]]*/ 'qademo';
   </script>
   <script th:inline="none">
+    // Duyệt/từ chối PR qua MODAL FORM dùng chung (không còn prompt từng mục).
+    var currentActor = window.PR_ACTOR || 'qademo';
+    function actorField(){
+      return { label:'Người thực hiện (username)', name:'actor', type:'text', required:true, default:currentActor };
+    }
+
     document.querySelectorAll('button[data-action]').forEach(function(btn){
       btn.addEventListener('click', function(){
         var a = btn.getAttribute('data-action');
         var id = btn.getAttribute('data-id');
-        var vaiTro = btn.getAttribute('data-vaitro');
-        var actor = prompt('Người thực hiện:', 'qademo'); if(!actor) return;
-        var body = { actor: actor };
-        if(a==='approve'){ body.vaiTro = prompt('Vai trò duyệt (cấp hiện tại):', vaiTro || ''); }
-        if(a==='reject'){ body.vaiTro = vaiTro; body.lyDo = prompt('Lý do từ chối:',''); }
-        fetch(CTX + 'api/v1/pr/'+id+'/'+a, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) })
-          .then(function(r){ return r.json(); })
-          .then(function(res){ if(res.success){ location.reload(); } else { alert('Không thực hiện được: ' + (res.error ? res.error.message : 'lỗi')); } })
-          .catch(function(e){ alert('Lỗi mạng: '+e); });
+        var vaiTro = btn.getAttribute('data-vaitro') || '';
+        var fields;
+        if(a === 'approve'){
+          fields = [
+            { label:'Vai trò duyệt (cấp hiện tại)', name:'vaiTro', type:'text', default:vaiTro },
+            actorField() ];
+        } else if(a === 'reject'){
+          fields = [
+            { label:'Vai trò duyệt (cấp hiện tại)', name:'vaiTro', type:'text', default:vaiTro },
+            { label:'Lý do từ chối', name:'lyDo', type:'text', required:true },
+            actorField() ];
+        } else {
+          fields = [ actorField() ];
+        }
+        ActionModal.open({
+          title: (btn.textContent || 'Thao tác').trim(),
+          fields: fields,
+          onSubmit: function(body, api){
+            fetch(CTX + 'api/v1/pr/'+id+'/'+a, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) })
+              .then(function(r){ return r.json(); })
+              .then(function(res){ if(res.success){ location.reload(); } else { api.serverError('Không thực hiện được: ' + (res.error ? res.error.message : 'lỗi')); } })
+              .catch(function(e){ api.serverError('Lỗi mạng: ' + e); });
+          }
+        });
       });
     });
   </script>
