@@ -261,6 +261,26 @@ class MasterDataManagementTest extends MySqlTestBase {
     }
 
     @Test
+    void importMaLoi_chiAdmin_vaiTroKhacBi403_dbKhongDoi() throws Exception {
+        int truoc = dem("SELECT COUNT(*) FROM ma_loi");
+        int nhomTruoc = dem("SELECT COUNT(*) FROM nhom_loi");
+        org.springframework.mock.web.MockMultipartFile file = new org.springframework.mock.web.MockMultipartFile(
+                "file", "x.xlsx", "application/octet-stream", new byte[]{1, 2, 3});
+        for (String u : List.of("baocao", "sxmgp", "qamgp", "qatd")) {
+            mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                            .multipart("/api/v1/masterdata/ma-loi/import").file(file).session(as(u)))
+                    .andExpect(status().isForbidden());
+        }
+        assertThat(dem("SELECT COUNT(*) FROM ma_loi")).isEqualTo(truoc);
+        assertThat(dem("SELECT COUNT(*) FROM nhom_loi")).isEqualTo(nhomTruoc);
+        // admin qua duoc guard (file rac -> loi xu ly file, khong phai 403)
+        int st = mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                        .multipart("/api/v1/masterdata/ma-loi/import").file(file).session(as("admin")))
+                .andReturn().getResponse().getStatus();
+        assertThat(st).isNotEqualTo(403);
+    }
+
+    @Test
     void menuMasterData_chiHienVoiAdmin() throws Exception {
         String admin = mockMvc.perform(get("/quan-tri").session(as("admin"))).andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();

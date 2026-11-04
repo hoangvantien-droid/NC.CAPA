@@ -4,6 +4,7 @@ import com.dqh.nccapa.common.error.ApiResponse;
 import com.dqh.nccapa.common.error.BusinessException;
 import com.dqh.nccapa.masterdata.service.ImportResult;
 import com.dqh.nccapa.masterdata.service.MaLoiImportService;
+import jakarta.servlet.http.HttpSession;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -30,12 +31,16 @@ public class MasterDataImportController {
 
     private final MaLoiImportService service;
 
-    public MasterDataImportController(MaLoiImportService service) {
+    private final MasterDataAdminGuard guard;
+
+    public MasterDataImportController(MaLoiImportService service, MasterDataAdminGuard guard) {
         this.service = service;
+        this.guard = guard;
     }
 
     @PostMapping(value = "/ma-loi/import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ApiResponse<ImportResult> importMaLoi(@RequestParam("file") MultipartFile file) {
+    public ApiResponse<ImportResult> importMaLoi(@RequestParam("file") MultipartFile file, HttpSession session) {
+        guard.yeuCauAdmin(session); // ghi master data: chi ADMIN, chan o server truoc khi xu ly file
         if (file == null || file.isEmpty()) {
             throw BusinessException.businessRule("File rỗng", "file");
         }
