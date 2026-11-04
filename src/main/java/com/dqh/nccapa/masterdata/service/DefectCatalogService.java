@@ -5,7 +5,10 @@ import com.dqh.nccapa.common.enums.Severity;
 import com.dqh.nccapa.common.error.BusinessException;
 import com.dqh.nccapa.masterdata.entity.MaLoi;
 import com.dqh.nccapa.masterdata.repository.MaLoiRepository;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
+
+import java.time.LocalDate;
 
 /** Tra cứu bộ mã lỗi + quyết định luồng/mức (StateMachine §6, APPX mục 4). */
 @Service
@@ -13,8 +16,37 @@ public class DefectCatalogService {
 
     private final MaLoiRepository repo;
 
-    public DefectCatalogService(MaLoiRepository repo) {
+    private final JdbcTemplate jdbc;
+
+    public DefectCatalogService(MaLoiRepository repo, JdbcTemplate jdbc) {
         this.repo = repo;
+        this.jdbc = jdbc;
+    }
+
+    /**
+     * Chặn dùng danh mục đã "ngừng dùng" khi TẠO NC mới: mã lỗi hết hiệu lực (hieu_luc_den đã qua) hoặc
+     * thuộc nhóm lỗi ngừng dùng; nhà máy / mã hàng ngừng dùng. Bản ghi không có trong bảng danh mục
+     * (NC nhập tự do) KHÔNG bị chặn ở đây, chỉ chặn khi biết chắc là đã ngừng. NC cũ không bị ảnh hưởng.
+     */
+    public void kiemTraDangDungKhiTaoNc(String nhaMay, String maHang, MaLoi ml) {
+        LocalDate den = ml.getHieuLucDen();
+        if (den != null && LocalDate.now().isAfter(den)) {
+            throw BusinessException.businessRule("Mã lỗi " + ml.getMaLoiId() + " đã ngừng dùng", "maLoiId");
+        }
+        if (ngung("SELECT COUNT(*) FROM nhom_loi WHERE nhom_loi_id = ? AND active = 0", ml.getNhomLoiId())) {
+            throw BusinessException.businessRule("Nhóm lỗi " + ml.getNhomLoiId() + " đã ngừng dùng", "maLoiId");
+        }
+        if (nhaMay != null && ngung("SELECT COUNT(*) FROM nha_may WHERE ma = ? AND active = 0", nhaMay)) {
+            throw BusinessException.businessRule("Nhà máy " + nhaMay + " đã ngừng dùng", "nhaMay");
+        }
+        if (maHang != null && ngung("SELECT COUNT(*) FROM ma_hang WHERE ma = ? AND active = 0", maHang)) {
+            throw BusinessException.businessRule("Mã hàng " + maHang + " đã ngừng dùng", "maHang");
+        }
+    }
+
+    private boolean ngung(String sql, String ma) {
+        Integer n = jdbc.queryForObject(sql, Integer.class, ma);
+        return n != null && n > 0;
     }
 
     public MaLoi get(String maLoiId) {

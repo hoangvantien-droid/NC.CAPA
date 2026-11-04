@@ -51,6 +51,10 @@
            th:classappend="${active == 'admin'} ? 'on' : ''">
           <span class="side-ic">⚙</span><span>Quản trị</span>
         </a>
+        <a th:if="${quyen.laAdmin}" th:href="@{/quan-tri/master-data}" class="side-item"
+           th:classappend="${active == 'masterdata'} ? 'on' : ''">
+          <span class="side-ic">▦</span><span>Master data</span>
+        </a>
       </div>
     </nav>
   </aside>

@@ -91,6 +91,7 @@ public class NcService {
         TaoNcRequest.ChiTieuItem dongNangNhat = null;
         for (TaoNcRequest.ChiTieuItem ct : req.chiTieu) {
             MaLoi ml = defectCatalog.get(ct.maLoiId);
+            defectCatalog.kiemTraDangDungKhiTaoNc(req.nhaMay, ct.maHang, ml); // danh mục ngừng dùng không dùng cho NC mới
             if (dongNangNhat == null || ml.getMucNghiemTrongDefault().caoHon(mucPhieu)) {
                 dongNangNhat = ct;
             }

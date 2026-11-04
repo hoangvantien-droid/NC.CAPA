@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Master data — NC/CAPA</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="/css/app.css"/>
+</head>
+<body>
+  <header class="topbar">
+    <span class="brand">QLone<span class="sep">·</span>NC/CAPA</span>
+    <span class="spacer"></span>
+    <div th:replace="~{fragments/user-switcher :: quyenBadge}"></div>
+    <div th:replace="~{fragments/user-switcher :: userSwitcher}" style="margin-left:12px"></div>
+  </header>
+
+  <div class="app-shell">
+  <div th:replace="~{fragments/sidebar :: sidebar('masterdata')}"></div>
+  <div class="content">
+
+  <main class="wrap">
+    <h2 style="font-size:16px;margin:20px 0 8px">Master data</h2>
+    <p class="hint" style="margin-bottom:12px">Khai báo danh mục dùng khi tạo NC. Không xoá bản ghi: dùng “Ngừng dùng” để NC cũ vẫn tham chiếu được. Chỉ quản trị viên truy cập được.</p>
+
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+      <a th:each="l : ${loaiList}" th:href="@{/quan-tri/master-data/{s}(s=${l.slug})}"
+         class="btn" th:classappend="${l.slug == loai} ? 'btn-primary' : ''" th:text="${l.nhan}">Danh mục</a>
+    </div>
+
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px">
+      <form method="get" th:action="@{/quan-tri/master-data/{s}(s=${loai})}" style="display:flex;gap:8px;flex-wrap:wrap">
+        <input type="search" name="q" th:value="${q}" placeholder="Tìm theo mã / tên" aria-label="Tìm theo mã hoặc tên"
+               style="padding:8px 10px;border:1px solid var(--line);border-radius:7px"/>
+        <button type="submit" class="btn">Tìm</button>
+      </form>
+      <span class="spacer" style="flex:1"></span>
+      <button type="button" class="btn btn-primary" id="md-add">＋ Thêm <span th:text="${#strings.toLowerCase(loaiNhan)}">danh mục</span></button>
+    </div>
+
+    <div class="table-wrap">
+    <table id="md-table">
+      <thead>
+        <tr>
+          <th th:each="c : ${cols}" th:text="${c['label']}">Cột</th>
+          <th>Thao tác</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr th:each="r : ${rows}" th:attr="data-ma=${r['ma']}">
+          <td th:each="c : ${cols}" th:switch="${c['fmt']}">
+            <span th:case="'muc'" class="pill" th:classappend="${'sev-' + r[c['key']]}"
+                  th:text="${nhan.mucNghiemTrong(r[c['key']])}">—</span>
+            <span th:case="'nguy'" th:text="${nhan.moiNguy(r[c['key']])}">—</span>
+            <span th:case="'nhomN'" th:text="${nhan.nhomN(r[c['key']])}">—</span>
+            <span th:case="'bool'" th:text="${r[c['key']] == true} ? 'Có' : 'Không'">—</span>
+            <span th:case="'trangThai'" class="pill st" th:text="${r[c['key']] == true} ? 'Đang dùng' : 'Ngừng dùng'">—</span>
+            <span th:case="*" th:text="${r[c['key']]} ?: '—'" th:classappend="${c['key'] == 'ma'} ? 'id' : ''">—</span>
+          </td>
+          <td>
+            <button type="button" class="btn" data-act="edit" th:attr="data-ma=${r['ma']}">Sửa</button>
+            <button type="button" class="btn" data-act="stop" th:if="${r['dangDung'] == true}" th:attr="data-ma=${r['ma']}">Ngừng dùng</button>
+            <button type="button" class="btn" data-act="resume" th:unless="${r['dangDung'] == true}" th:attr="data-ma=${r['ma']}">Dùng lại</button>
+          </td>
+        </tr>
+        <tr th:if="${rows.isEmpty()}"><td th:colspan="${cols.size() + 1}" class="empty">Chưa có bản ghi nào.</td></tr>
+      </tbody>
+    </table>
+    </div>
+  </main>
+
+  </div>
+  </div>
+
+  <div th:replace="~{fragments/action-modal :: modal}"></div>
+  <div th:replace="~{fragments/toast :: toast}"></div>
+
+  <script th:inline="javascript">
+    // Context path (prod: '/nc-capa/', local: '/'); @{/} tự thêm context path.
+    window.CTX = (/*[[@{/}]]*/ '/').split(';')[0];
+    window.MD = {
+      loai: /*[[${loai}]]*/ 'nha-may',
+      loaiNhan: /*[[${loaiNhan}]]*/ 'Nhà máy',
+      rows: /*[[${rows}]]*/ [],
+      nhaMayOpts: /*[[${nhaMayOpts}]]*/ [],
+      nhomLoiOpts: /*[[${nhomLoiOpts}]]*/ []
+    };
+  </script>
+  <script th:inline="none">
+    (function(){
+      var MD = window.MD;
+      var API = CTX + 'api/v1/masterdata/' + MD.loai;
+
+      // Schema form theo danh mục. edit=true: bỏ trường mã (khoá chính không sửa được).
+      function schema(edit, cur){
+        cur = cur || {};
+        var f = [];
+        if(!edit) f.push({ name:'ma', label:'Mã', type:'text', required:true });
+        if(MD.loai === 'nhom-loi') f.push({ name:'ten', label:'Tên nhóm', type:'text', required:true, default:cur.ten });
+        else if(MD.loai === 'ma-loi') f.push({ name:'ten', label:'Tên mã lỗi', type:'text', required:true, default:cur.ten });
+        else f.push({ name:'ten', label:'Tên', type:'text', required:true, default:cur.ten });
+
+        if(MD.loai === 'ma-hang'){
+          f.push({ name:'nhaMay', label:'Nhà máy', type:'select', required:true, options:MD.nhaMayOpts, default:cur.nhaMay });
+        } else if(MD.loai === 'nhom-loi'){
+          f.push({ name:'theoNguon', label:'Theo nguồn', type:'text', required:true, default:cur.theoNguon });
+        } else if(MD.loai === 'ncc'){
+          f.push({ name:'coGiayCn', label:'Có giấy chứng nhận', type:'checkbox', default:cur.coGiayCn });
+          f.push({ name:'cnHetHanNgay', label:'Chứng nhận hết hạn ngày', type:'date', default:cur.cnHetHanNgay });
+        } else if(MD.loai === 'ma-loi'){
+          f.push({ name:'nhomLoiId', label:'Nhóm lỗi', type:'select', required:true, options:MD.nhomLoiOpts, default:cur.nhomLoiId });
+          f.push({ name:'mucNghiemTrongDefault', label:'Mức nghiêm trọng mặc định', type:'select', required:true,
+                   options:labelOpts('mucNghiemTrong', ['NHE','NANG','NGHIEM_TRONG']), default:cur.mucNghiemTrongDefault });
+          f.push({ name:'moiNguyDefault', label:'Mối nguy mặc định', type:'select', required:true,
+                   options:labelOpts('moiNguy', ['VAT_LY','HOA_HOC','VI_SINH','DI_UNG','CAM_QUAN','KHONG']), default:cur.moiNguyDefault });
+          f.push({ name:'batBuocKhoanhVung', label:'Bắt buộc khoanh vùng', type:'checkbox', default:cur.batBuocKhoanhVung });
+          f.push({ name:'nhomNKiemChung', label:'Nhóm N kiểm chứng', type:'select', required:true,
+                   options:labelOpts('nhomN', ['SX_TP_NVL','HETHONG_TBDO_NCC_MT']), default:cur.nhomNKiemChung });
+          f.push({ name:'nguoiSoHuu', label:'Người sở hữu', type:'text', default:cur.nguoiSoHuu || 'QA_TAP_DOAN' });
+          f.push({ name:'hieuLucTu', label:'Hiệu lực từ', type:'date', required:true, default:cur.hieuLucTu });
+          f.push({ name:'hieuLucDen', label:'Hiệu lực đến', type:'date', default:cur.hieuLucDen });
+        }
+        return f;
+      }
+
+      var submitBtn = document.getElementById('action-modal-submit');
+      function gui(url, method, body, modalApi, okMsg){
+        var label = submitBtn.textContent;
+        submitBtn.disabled = true; submitBtn.textContent = 'Đang gửi…';
+        var opts = { method:method, headers:{'Content-Type':'application/json'} };
+        if(body !== null) opts.body = JSON.stringify(body);
+        fetch(url, opts)
+          .then(function(r){ return r.json(); })
+          .then(function(res){
+            submitBtn.textContent = label;
+            if(res.success){
+              modalApi.close();
+              showToast(okMsg, 'success');
+              setTimeout(function(){ location.reload(); }, 700);
+            } else {
+              modalApi.serverError(res.error ? res.error.message : 'Có lỗi xảy ra.');
+            }
+          }).catch(function(err){
+            submitBtn.textContent = label;
+            modalApi.serverError('Lỗi mạng: ' + err);
+          });
+      }
+
+      function findRow(ma){
+        for(var i = 0; i < MD.rows.length; i++){ if(MD.rows[i].ma === ma) return MD.rows[i]; }
+        return null;
+      }
+
+      document.getElementById('md-add').addEventListener('click', function(){
+        ActionModal.open({
+          title: 'Thêm ' + MD.loaiNhan.toLowerCase(),
+          fields: schema(false),
+          onSubmit: function(body, m){ gui(API, 'POST', body, m, 'Đã thêm.'); }
+        });
+      });
+
+      document.getElementById('md-table').addEventListener('click', function(e){
+        var btn = e.target.closest('button[data-act]');
+        if(!btn) return;
+        var ma = btn.getAttribute('data-ma');
+        var act = btn.getAttribute('data-act');
+        var url = API + '/' + encodeURIComponent(ma);
+        if(act === 'edit'){
+          var cur = findRow(ma) || {};
+          ActionModal.open({
+            title: 'Sửa ' + MD.loaiNhan.toLowerCase() + ' ' + ma,
+            fields: schema(true, cur),
+            onSubmit: function(body, m){ gui(url, 'PUT', body, m, 'Đã lưu.'); }
+          });
+        } else if(act === 'stop'){
+          ActionModal.open({
+            title: 'Ngừng dùng ' + ma + '?',
+            fields: [],
+            onSubmit: function(body, m){ gui(url + '/ngung-dung', 'POST', null, m, 'Đã ngừng dùng.'); }
+          });
+        } else if(act === 'resume'){
+          ActionModal.open({
+            title: 'Dùng lại ' + ma + '?',
+            fields: [],
+            onSubmit: function(body, m){ gui(url + '/kich-hoat', 'POST', null, m, 'Đã dùng lại.'); }
+          });
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

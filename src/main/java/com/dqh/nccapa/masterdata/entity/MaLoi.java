@@ -59,6 +59,7 @@ public class MaLoi {
     public HazardType getMoiNguyDefault() { return moiNguyDefault; }
     public boolean isBatBuocKhoanhVung() { return batBuocKhoanhVung; }
     public NKiemChungGroup getNhomNKiemChung() { return nhomNKiemChung; }
+    public String getNguoiSoHuu() { return nguoiSoHuu; }
     public LocalDate getHieuLucTu() { return hieuLucTu; }
     public LocalDate getHieuLucDen() { return hieuLucDen; }
 

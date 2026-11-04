@@ -112,6 +112,23 @@ public final class NhanHienThi {
             "TAI_CHE", "Tái chế",
             "TIEU_HUY", "Tiêu huỷ");
 
+    private static final Map<String, String> MUC_NGHIEM_TRONG = Map.of(
+            "NHE", "Nhẹ",
+            "NANG", "Nặng",
+            "NGHIEM_TRONG", "Nghiêm trọng");
+
+    private static final Map<String, String> MOI_NGUY = Map.of(
+            "VAT_LY", "Vật lý",
+            "HOA_HOC", "Hoá học",
+            "VI_SINH", "Vi sinh",
+            "DI_UNG", "Dị ứng",
+            "CAM_QUAN", "Cảm quan",
+            "KHONG", "Không");
+
+    private static final Map<String, String> NHOM_N = Map.of(
+            "SX_TP_NVL", "SX / thành phẩm / NVL (N ≥ 1)",
+            "HETHONG_TBDO_NCC_MT", "Hệ thống / TB đo / NCC / MT (N = 0)");
+
     private NhanHienThi() { }
 
     /** Tra nhãn; null -> "—"; không có trong map -> nguyên mã. */
@@ -150,4 +167,10 @@ public final class NhanHienThi {
     public String loaiHanhDong(Object ma) { return tra(LOAI_HANH_DONG, ma); }
 
     public String disposition(Object ma) { return tra(DISPOSITION, ma); }
+
+    public String mucNghiemTrong(Object ma) { return tra(MUC_NGHIEM_TRONG, ma); }
+
+    public String moiNguy(Object ma) { return tra(MOI_NGUY, ma); }
+
+    public String nhomN(Object ma) { return tra(NHOM_N, ma); }
 }
