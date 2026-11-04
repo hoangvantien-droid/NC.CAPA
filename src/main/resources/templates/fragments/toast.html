@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<body>
+<!--
+  Toast thông báo DÙNG CHUNG (thuần HTML/CSS/JS, KHÔNG thư viện).
+  - Container cố định góc trên-phải; CSS trong app.css (.toast-wrap/.toast...).
+  - Cung cấp hàm toàn cục window.showToast(message, type) với type = success | error | info.
+    Toast tự biến mất sau ~3.5s, có nút đóng, nhiều toast xếp chồng, trượt vào từ phải.
+  Nhúng bằng: <div th:replace="~{fragments/toast :: toast}"></div>
+-->
+<div th:fragment="toast">
+  <div id="toast-wrap" class="toast-wrap" aria-live="polite" aria-atomic="false"></div>
+
+  <script th:inline="none">
+    // ====== showToast: thông báo trượt góc dùng chung (thuần JS) ======
+    (function(){
+      function escHtml(s){
+        return String(s == null ? '' : s)
+          .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+          .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+      }
+
+      function dismiss(el){
+        if(!el || el.classList.contains('leaving')) return;
+        el.classList.add('leaving');
+        el.addEventListener('animationend', function(){
+          if(el.parentNode) el.parentNode.removeChild(el);
+        });
+      }
+
+      window.showToast = function(message, type){
+        var wrap = document.getElementById('toast-wrap');
+        if(!wrap) return;
+        var t = (type === 'success' || type === 'error' || type === 'info') ? type : 'info';
+        var el = document.createElement('div');
+        el.className = 'toast ' + t;
+        el.setAttribute('role', t === 'error' ? 'alert' : 'status');
+        el.innerHTML = '<span class="toast-msg">' + escHtml(message) + '</span>'
+          + '<button type="button" class="toast-x" aria-label="Đóng">&times;</button>';
+        el.querySelector('.toast-x').addEventListener('click', function(){ dismiss(el); });
+        wrap.appendChild(el);
+        setTimeout(function(){ dismiss(el); }, 3500);
+      };
+    })();
+  </script>
+</div>
+</body>
+</html>

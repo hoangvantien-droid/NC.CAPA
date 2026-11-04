@@ -177,6 +177,7 @@
   </div>
 
   <div th:replace="~{fragments/action-modal :: modal}"></div>
+  <div th:replace="~{fragments/toast :: toast}"></div>
 
   <script th:inline="javascript">
     // Context path (prod: '/nc-capa/', local: '/'); @{/} tự thêm context path.
@@ -288,7 +289,7 @@
 
       formEl.addEventListener('submit', function(e){
         e.preventDefault();
-        if(!fileEl.files || fileEl.files.length === 0){ alert('Chọn file trước.'); return; }
+        if(!fileEl.files || fileEl.files.length === 0){ showToast('Chọn file trước.', 'info'); return; }
         // actor LẤY TỪ tài khoản hiện tại (bỏ prompt hỏi người tải).
         var actor = currentActor;
         var fd = new FormData();
@@ -300,8 +301,8 @@
           .then(function(r){ return r.json(); })
           .then(function(res){
             if(res.success){ fileEl.value=''; loadList(); }
-            else { alert('Không tải được: ' + (res.error ? res.error.message : 'lỗi')); }
-          }).catch(function(e){ alert('Lỗi mạng: '+e); });
+            else { showToast('Không tải được: ' + (res.error ? res.error.message : 'lỗi'), 'error'); }
+          }).catch(function(e){ showToast('Lỗi mạng: '+e, 'error'); });
       });
 
       loadList();

@@ -140,6 +140,7 @@
   </div>
 
   <div th:replace="~{fragments/action-modal :: modal}"></div>
+  <div th:replace="~{fragments/toast :: toast}"></div>
 
   <script th:inline="javascript">
     // Context path (prod: '/nc-capa/', local: '/'); @{/} tự thêm context path.
@@ -280,7 +281,7 @@
           // Khoá vùng hiển thị danh sách (chỉ để xem), không gửi lên server.
           var dsEl = document.getElementById('mf-_dsFile');
           if(dsEl){ dsEl.readOnly = true; dsEl.style.background = '#f8fafc'; }
-        }).catch(function(e){ alert('Lỗi mạng: '+e); });
+        }).catch(function(e){ showToast('Lỗi mạng: '+e, 'error'); });
       });
     });
   </script>

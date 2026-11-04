@@ -302,3 +302,37 @@ body.modal-open{overflow:hidden}
   padding:14px 18px;border-top:1px solid var(--line);background:#f8fafc;
 }
 .modal-foot .btn[disabled]{opacity:.6;cursor:default}
+
+/* ---- Toast thông báo (trượt góc trên-phải, theme navy) ---- */
+.toast-wrap{
+  position:fixed;top:16px;right:16px;z-index:9999;
+  display:flex;flex-direction:column;gap:10px;
+  max-width:360px;pointer-events:none;
+}
+.toast{
+  display:flex;align-items:flex-start;gap:10px;
+  padding:11px 12px 11px 14px;border-radius:var(--r);
+  border:1px solid var(--line);border-left:4px solid var(--navy2);
+  background:var(--soft);box-shadow:var(--sh);
+  color:var(--ink);font-size:13.5px;font-weight:600;line-height:1.45;
+  pointer-events:auto;
+  animation:toast-in .22s ease-out;
+}
+.toast.leaving{animation:toast-out .2s ease-in forwards}
+.toast.success{border-left-color:var(--ok);background:var(--ok-l);color:var(--ok-t)}
+.toast.error{border-left-color:var(--bad);background:var(--bad-l);color:var(--bad-t)}
+.toast.info{border-left-color:var(--navy2);background:var(--soft);color:var(--navy3)}
+.toast-msg{flex:1;word-break:break-word}
+.toast-x{
+  flex:none;border:none;background:none;cursor:pointer;
+  font-size:16px;line-height:1;color:inherit;opacity:.7;padding:0 2px;
+}
+.toast-x:hover{opacity:1}
+@keyframes toast-in{
+  from{opacity:0;transform:translateX(24px)}
+  to{opacity:1;transform:translateX(0)}
+}
+@keyframes toast-out{
+  from{opacity:1;transform:translateX(0)}
+  to{opacity:0;transform:translateX(24px)}
+}

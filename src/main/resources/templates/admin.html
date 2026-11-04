@@ -40,6 +40,8 @@
   </div>
   </div>
 
+  <div th:replace="~{fragments/toast :: toast}"></div>
+
   <script th:inline="javascript">
     // Context path (prod: '/nc-capa/', local: '/'); @{/} tự thêm context path.
     window.CTX = (/*[[@{/}]]*/ '/').split(';')[0];
@@ -49,7 +51,7 @@
       e.preventDefault();
       var fileEl = document.getElementById('import-file');
       var out = document.getElementById('import-result');
-      if(!fileEl.files || fileEl.files.length === 0){ alert('Chọn file .xlsx trước.'); return; }
+      if(!fileEl.files || fileEl.files.length === 0){ showToast('Chọn file .xlsx trước.', 'info'); return; }
       var fd = new FormData();
       fd.append('file', fileEl.files[0]);
       fetch(CTX + 'api/v1/masterdata/ma-loi/import', { method:'POST', body: fd })

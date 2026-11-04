@@ -43,6 +43,8 @@
   </div>
   </div>
 
+  <div th:replace="~{fragments/toast :: toast}"></div>
+
   <script th:inline="javascript">
     // Context path (prod: '/nc-capa/', local: '/'); @{/} tự thêm context path.
     window.CTX = (/*[[@{/}]]*/ '/').split(';')[0];
@@ -51,9 +53,9 @@
     document.getElementById('flush').addEventListener('click', function(){
       fetch(CTX + 'api/v1/ticket/flush', { method:'POST' })
         .then(function(r){ return r.json(); })
-        .then(function(res){ if(res.success){ alert('Đã gửi ' + res.data + ' callback.'); location.reload(); }
-          else { alert('Lỗi: ' + (res.error ? res.error.message : '')); } })
-        .catch(function(e){ alert('Lỗi mạng: '+e); });
+        .then(function(res){ if(res.success){ showToast('Đã gửi ' + res.data + ' callback.', 'success'); location.reload(); }
+          else { showToast('Lỗi: ' + (res.error ? res.error.message : ''), 'error'); } })
+        .catch(function(e){ showToast('Lỗi mạng: '+e, 'error'); });
     });
   </script>
 </body>
