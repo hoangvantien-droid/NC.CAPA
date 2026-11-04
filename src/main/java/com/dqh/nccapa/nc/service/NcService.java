@@ -157,7 +157,13 @@ public class NcService {
         if (phaiKhoanhVung && nc.getTrangThai() == NcStatus.New) {
             throw BusinessException.guard("NC Nghiêm trọng / an toàn TP phải qua bước Khoanh vùng trước khi trình duyệt");
         }
-        nc.setNguyenNhanSoBo(req.nguyenNhanSoBo);
+        if (isBlank(req.nguyenNhanDieuTra) && isBlank(req.nguyenNhanSoBo)) {
+            throw BusinessException.businessRule("Cần nhập nguyên nhân sau điều tra", "nguyenNhanDieuTra");
+        }
+        // Nguyên nhân sơ bộ (lúc tạo) giữ nguyên nếu không gửi lại; nguyên nhân sau điều tra lưu riêng.
+        if (!isBlank(req.nguyenNhanSoBo)) nc.setNguyenNhanSoBo(req.nguyenNhanSoBo);
+        nc.setNguyenNhanDieuTra(isBlank(req.nguyenNhanDieuTra) ? req.nguyenNhanSoBo : req.nguyenNhanDieuTra);
+        nc.setGiaiPhapXuLy(req.giaiPhapXuLy);
         nc.setDispositionDeXuat(req.dispositionDeXuat);
         nc.setChiPhiUocTinh(req.chiPhiUocTinh);
         nc.setBoPhanThucHien(req.boPhanThucHien);
@@ -171,12 +177,33 @@ public class NcService {
     }
 
     /**
+     * N7: Rejected -> PendingApproval. QA nhà máy nộp lại đề xuất đã sửa (disposition, chi phí, nguyên nhân...).
+     * Dùng chung logic với submitApproval (reset duyệt cấp 1, ghi người đề xuất mới cho SoD).
+     */
+    @Transactional
+    public Nc resubmit(String soHieu, SubmitApprovalRequest req) {
+        Nc nc = layNc(soHieu);
+        if (nc.getTrangThai() != NcStatus.Rejected) {
+            throw BusinessException.guard("resubmit chỉ từ Rejected, hiện tại: " + nc.getTrangThai());
+        }
+        return submitApproval(soHieu, req);
+    }
+
+    /**
      * N5: PendingApproval -> Processing.
      * NC Nghiêm trọng: QA TĐ duyệt 1 lần. NC Nặng: 2 lượt bởi 2 user khác nhau (API §6.2).
      * SoD (§2.2): người đề xuất disposition không được duyệt cấp 1.
      */
     @Transactional
     public Nc approve(String soHieu, ApproveRequest req) {
+        Nc nc = approveCore(soHieu, req);
+        if (!isBlank(req.yKien)) {
+            audit.log("NC", soHieu, "Y_KIEN_DUYET", null, null, req.yKien, req.actor);
+        }
+        return nc;
+    }
+
+    private Nc approveCore(String soHieu, ApproveRequest req) {
         Nc nc = layNc(soHieu);
         if (nc.getTrangThai() != NcStatus.PendingApproval) {
             throw BusinessException.guard("approve chỉ từ PendingApproval, hiện tại: " + nc.getTrangThai());
@@ -260,7 +287,11 @@ public class NcService {
         if (req.chiPhiThucTe == null) {
             throw BusinessException.businessRule("Bắt buộc nhập chi phí xử lý thực tế", "chiPhiThucTe");
         }
+        if (isBlank(req.bangChung) && isBlank(req.ketQuaThucTe)) {
+            throw BusinessException.businessRule("Cần nhập kết quả thực tế hoặc bằng chứng", "ketQuaThucTe");
+        }
         nc.setBangChung(req.bangChung);
+        if (!isBlank(req.ketQuaThucTe)) nc.setKetQuaXuLy(req.ketQuaThucTe);
         nc.setChiPhiThucTe(req.chiPhiThucTe);
         nc.setTrangThai(NcStatus.PendingVerification);
         ncRepo.save(nc);
@@ -285,6 +316,20 @@ public class NcService {
         if (nc.getChiPhiThucTe() == null) {
             throw BusinessException.businessRule("Chưa nhập chi phí xử lý thực tế", "chiPhiThucTe");
         }
+        String ketQuaTt = isBlank(req.ketQuaThamTra) ? "DAT" : req.ketQuaThamTra.trim().toUpperCase();
+        if (!ketQuaTt.equals("DAT") && !ketQuaTt.equals("KHONG_DAT")) {
+            throw BusinessException.businessRule("ketQuaThamTra phải là DAT hoặc KHONG_DAT", "ketQuaThamTra");
+        }
+        if (ketQuaTt.equals("KHONG_DAT")) {
+            // Thẩm tra KHÔNG ĐẠT: trả NC về Processing để bộ phận làm lại; ghi kết luận làm lý do.
+            nc.setKetLuanThamTra(req.ketLuanThamTra);
+            nc.setKetQuaThamTra("KHONG_DAT");
+            nc.setTrangThai(NcStatus.Processing);
+            ncRepo.save(nc);
+            audit.log("NC", soHieu, "THAM_TRA_KHONG_DAT", NcStatus.PendingVerification.name(),
+                    NcStatus.Processing.name(), req.ketLuanThamTra, req.actor);
+            return nc;
+        }
         String capaChuaXong = capaClosureChecker.firstUnterminatedCapa(soHieu);
         if (capaChuaXong != null) {
             throw new BusinessException(ErrorCode.BUSINESS_RULE,
@@ -297,6 +342,7 @@ public class NcService {
             }
         }
         nc.setKetLuanThamTra(req.ketLuanThamTra);
+        nc.setKetQuaThamTra("DAT");
         nc.setTrangThai(NcStatus.Closed);
         ncRepo.save(nc);
         audit.logChuyenTrangThai("NC", soHieu,
@@ -475,6 +521,8 @@ public class NcService {
                 "kế thừa từ CAPA fail " + capaFailId, "SYSTEM");
         return nc;
     }
+
+    private static boolean isBlank(String s) { return s == null || s.isBlank(); }
 
     @Transactional(readOnly = true)
     public Nc layNc(String soHieu) {

@@ -98,6 +98,7 @@
           // text / number / date
           var t = (f.type === 'number' || f.type === 'date') ? f.type : 'text';
           var extra = (f.type === 'number' && f.min != null) ? (' min="' + esc(f.min) + '"') : '';
+          if(f.type === 'number' && f.max != null) extra += ' max="' + esc(f.max) + '"';
           control = '<input type="' + t + '" id="' + fid + '" data-name="' + esc(f.name) + '"'
             + extra + ' value="' + esc(f.default == null ? '' : f.default) + '"/>';
         }
@@ -167,6 +168,11 @@
             if(!firstBad) firstBad = f.name;
             return;
           }
+          if(f.type === 'number' && v != null && !isNaN(v) && f.max != null && v > f.max){
+            showFieldError(f.name, 'Giá trị phải ≤ ' + f.max + '.');
+            if(!firstBad) firstBad = f.name;
+            return;
+          }
           // File gửi qua multipart riêng (onSubmit tự lấy từ input); không đưa vào body JSON.
           if(f.type !== 'file') body[f.name] = v;
         });
@@ -179,7 +185,8 @@
 
       function open(opts){
         // opts: { title, fields:[...], onSubmit: function(body, modalApi) }
-        current = { schema: { fields: opts.fields || [] }, onSubmit: opts.onSubmit };
+        current = { schema: { fields: opts.fields || [] }, onSubmit: opts.onSubmit,
+                    beforeCollect: opts.beforeCollect, onOpen: opts.onOpen };
         titleEl.textContent = opts.title || 'Thao tác';
         fieldsEl.innerHTML = '';
         current.schema.fields.forEach(function(f){ fieldsEl.appendChild(buildField(f)); });
@@ -187,6 +194,7 @@
         submitBtn.disabled = false;
         overlay.hidden = false;
         document.body.classList.add('modal-open');
+        if(typeof current.onOpen === 'function') current.onOpen({ fieldsEl: fieldsEl, controlOf: controlOf });
         var first = fieldsEl.querySelector('input,select,textarea');
         if(first) setTimeout(function(){ first.focus(); }, 0);
       }
@@ -208,6 +216,7 @@
       formEl.addEventListener('submit', function(e){
         e.preventDefault();
         if(!current) return;
+        if(typeof current.beforeCollect === 'function') current.beforeCollect({ fieldsEl: fieldsEl, controlOf: controlOf });
         var body = collect();
         if(body === null) return;
         submitBtn.disabled = true;

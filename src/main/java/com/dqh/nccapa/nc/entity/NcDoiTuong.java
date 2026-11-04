@@ -47,6 +47,7 @@ public class NcDoiTuong {
     public boolean isKhoanhVung() { return khoanhVung; }
     public String getTrangThaiDongLo() { return trangThaiDongLo; }
     public String getChungTuHold() { return chungTuHold; }
+    public String getChungTuUnhold() { return chungTuUnhold; }
 
     public void setKhoanhVung(boolean v) { this.khoanhVung = v; }
     public void setTrangThaiDongLo(String v) { this.trangThaiDongLo = v; }

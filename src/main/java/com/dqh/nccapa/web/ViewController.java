@@ -189,8 +189,16 @@ public class ViewController {
         var capa = capaService.layCapa(id);
         model.addAttribute("capa", capa);
         model.addAttribute("actions", capaService.actionsCua(id));
+        // Yêu cầu gia hạn theo action (hiện/duyệt ngay trong bảng action) + ngày hiện tại để gắn nhãn Quá hạn.
+        model.addAttribute("giaHan", capaService.giaHanCua(id).stream().collect(
+                java.util.stream.Collectors.groupingBy(com.dqh.nccapa.capa.entity.CapaActionExtension::getActionId)));
+        model.addAttribute("homNay", java.time.LocalDate.now());
         model.addAttribute("audit", audit.timTheo("CAPA", String.valueOf(id)));
-        model.addAttribute("ncs", ncCapaLink.ncSoHieuOfCapa(id));
+        List<String> ncSo = ncCapaLink.ncSoHieuOfCapa(id);
+        model.addAttribute("ncs", ncSo);
+        // NC gốc: hiện bối cảnh vấn đề trên trang CAPA và điền sẵn gợi ý (RCA, khắc phục) từ NC.
+        model.addAttribute("ncGoc", ncSo.stream().map(ncRepo::findById)
+                .filter(java.util.Optional::isPresent).map(java.util.Optional::get).toList());
         model.addAttribute("hanhDong", hanhDongCapa(capa));
         model.addAttribute("steps8d", capa.getTrangThai() != null ? capaService.steps8d(id) : java.util.List.of());
         // D-04: cho sửa kết quả kiểm chứng (I7 versioning) khi đã có ket_qua đã xác nhận.

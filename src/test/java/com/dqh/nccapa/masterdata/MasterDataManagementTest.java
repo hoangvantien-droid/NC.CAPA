@@ -224,7 +224,8 @@ class MasterDataManagementTest extends MySqlTestBase {
         assertThat(dem("SELECT COUNT(*) FROM ma_loi WHERE ma_loi_id='FG-01' AND nhom_loi_id='FG' "
                 + "AND ten_ma_loi='Doi ten'")).isEqualTo(1);
         // trang render có cha ngừng dùng trong lựa chọn (kèm nhãn) để dropdown sửa giữ đúng cha
-        assertThat(html("/quan-tri/master-data/ma-loi")).contains("(ngừng dùng)");
+        // Nhãn nằm trong JS inline: Thymeleaf escape Unicode (ừ -> \u1EEB, ù -> \u00F9) nên so dạng đã escape.
+        assertThat(html("/quan-tri/master-data/ma-loi")).contains("(ng\\u1EEBng d\\u00F9ng)");
         // nhưng không chuyển sang một cha đang ngừng dùng khác
         jdbc.update("UPDATE nhom_loi SET active = 0 WHERE nhom_loi_id = 'PRC'");
         api(put("/api/v1/masterdata/ma-loi/REC-06"), "admin", "{\"nhomLoiId\":\"PRC\"}")

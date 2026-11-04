@@ -52,6 +52,11 @@ public class NcController {
         return ApiResponse.ok(ncService.submitApproval(so, req));
     }
 
+    @PostMapping("/{so}/resubmit")
+    public ApiResponse<Nc> resubmit(@PathVariable("so") String so, @Valid @RequestBody SubmitApprovalRequest req) {
+        return ApiResponse.ok(ncService.resubmit(so, req));
+    }
+
     @PostMapping("/{so}/approve")
     public ApiResponse<Nc> approve(@PathVariable("so") String so, @Valid @RequestBody ApproveRequest req) {
         return ApiResponse.ok(ncService.approve(so, req));

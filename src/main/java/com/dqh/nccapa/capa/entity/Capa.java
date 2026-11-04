@@ -126,6 +126,7 @@ public class Capa {
     public Integer getRpnS() { return rpnS; }
     public Integer getRpnO() { return rpnO; }
     public Integer getRpnD() { return rpnD; }
+    public boolean isCoYeuCauPhapLy() { return coYeuCauPhapLy; }
 
     public void setTrangThai(CapaStatus t) { this.trangThai = t; }
     public void setKhacPhucTucThoi(String v) { this.khacPhucTucThoi = v; }
@@ -151,6 +152,16 @@ public class Capa {
     public void setMonitoringBatDau(LocalDateTime v) { this.monitoringBatDau = v; }
     public void setNguoiDieuTra(String v) { this.nguoiDieuTra = v; }
     public String getNguoiDieuTra() { return nguoiDieuTra; }
+
+    /**
+     * Mức RPN theo REQ 3.2: High nếu RPN >= 50 HOẶC S = 5; Medium 20–49; Low 1–19. Null nếu chưa nhập đủ S/O/D.
+     */
+    public String rpnMuc() {
+        Integer r = rpn();
+        if (r == null) return null;
+        if (r >= 50 || rpnS == 5) return "High";
+        return r >= 20 ? "Medium" : "Low";
+    }
 
     /** RPN = s*o*d; phân loại ở service (REQ mục 3.2). */
     public Integer rpn() {

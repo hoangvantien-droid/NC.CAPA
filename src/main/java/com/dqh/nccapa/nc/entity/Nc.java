@@ -76,6 +76,12 @@ public class Nc {
     @Column(name = "nguyen_nhan_so_bo", columnDefinition = "TEXT")
     private String nguyenNhanSoBo;
 
+    @Column(name = "nguyen_nhan_dieu_tra", columnDefinition = "TEXT")
+    private String nguyenNhanDieuTra;   // nguyên nhân sau điều tra (có thể khác sơ bộ)
+
+    @Column(name = "giai_phap_xu_ly", columnDefinition = "TEXT")
+    private String giaiPhapXuLy;        // giải pháp / ghi chú xử lý
+
     @Column(name = "disposition_de_xuat", length = 24)
     private String dispositionDeXuat;
 
@@ -99,6 +105,9 @@ public class Nc {
 
     @Column(name = "ket_luan_tham_tra", columnDefinition = "TEXT")
     private String ketLuanThamTra;
+
+    @Column(name = "ket_qua_tham_tra", length = 16)
+    private String ketQuaThamTra;       // DAT | KHONG_DAT
 
     @Column(name = "da_duyet_cap_1", nullable = false)
     private boolean daDuyetCap1;
@@ -163,6 +172,21 @@ public class Nc {
     public String getNguoiDuyetCap1() { return nguoiDuyetCap1; }
     public String getKetQuaXuLy() { return ketQuaXuLy; }
     public LocalDateTime getCreatedAt() { return createdAt; }
+    public String getLenhSx() { return lenhSx; }
+    public String getCongDoan() { return congDoan; }
+    public LocalDate getNgaySx() { return ngaySx; }
+    public String getKhuVuc() { return khuVuc; }
+    public String getMoTaLoi() { return moTaLoi; }
+    public BigDecimal getSoLuong() { return soLuong; }
+    public String getNguyenNhanSoBo() { return nguyenNhanSoBo; }
+    public String getNguyenNhanDieuTra() { return nguyenNhanDieuTra; }
+    public String getGiaiPhapXuLy() { return giaiPhapXuLy; }
+    public String getDispositionDeXuat() { return dispositionDeXuat; }
+    public String getBoPhanThucHien() { return boPhanThucHien; }
+    public String getBangChung() { return bangChung; }
+    public String getKetLuanThamTra() { return ketLuanThamTra; }
+    public String getKetQuaThamTra() { return ketQuaThamTra; }
+    public String getNguoiBaoCao() { return nguoiBaoCao; }
 
     // mutators dùng bởi service/state machine
     public void setTrangThai(NcStatus t) { this.trangThai = t; }
@@ -179,6 +203,9 @@ public class Nc {
     public void setMoTaLoi(String v) { this.moTaLoi = v; }
     public void setSoLuong(BigDecimal v) { this.soLuong = v; }
     public void setNguyenNhanSoBo(String v) { this.nguyenNhanSoBo = v; }
+    public void setNguyenNhanDieuTra(String v) { this.nguyenNhanDieuTra = v; }
+    public void setGiaiPhapXuLy(String v) { this.giaiPhapXuLy = v; }
+    public void setKetQuaThamTra(String v) { this.ketQuaThamTra = v; }
     public void setDispositionDeXuat(String v) { this.dispositionDeXuat = v; }
     public void setChiPhiUocTinh(BigDecimal v) { this.chiPhiUocTinh = v; }
     public void setBoPhanThucHien(String v) { this.boPhanThucHien = v; }

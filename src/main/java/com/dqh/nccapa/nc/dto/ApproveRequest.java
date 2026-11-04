@@ -5,4 +5,5 @@ import jakarta.validation.constraints.NotBlank;
 /** Body POST /nc/{so}/approve (N5). NC Nặng cần 2 lượt bởi 2 user khác nhau. */
 public class ApproveRequest {
     @NotBlank public String actor;
+    public String yKien;   // ý kiến duyệt (tuỳ chọn) — ghi vào audit
 }
