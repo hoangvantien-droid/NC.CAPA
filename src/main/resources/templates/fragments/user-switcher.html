@@ -17,5 +17,15 @@
     </select>
     <noscript><button class="btn" type="submit">Đổi</button></noscript>
   </form>
+
+  <!--
+    Huy hiệu quyền hiển cạnh dropdown đổi tài khoản.
+    Cần: currentUser (DemoUser), nhaMayUser (String|null) — do DemoUserModelAdvice bơm vào.
+  -->
+  <span th:fragment="quyenBadge" class="quyen-badge" th:if="${currentUser != null}">
+    Đang xem với quyền: <strong th:text="${currentUser.vaiTro().tenHienThi}">vai trò</strong>
+    <span th:if="${nhaMayUser != null}" th:text="' · nhà máy ' + ${nhaMayUser}"></span>
+    <span th:if="${nhaMayUser == null}"> · toàn tập đoàn</span>
+  </span>
 </body>
 </html>

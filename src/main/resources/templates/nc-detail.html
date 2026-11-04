@@ -12,9 +12,14 @@
   <header class="topbar">
     <span class="brand">QLone<span class="sep">·</span>NC/CAPA</span>
     <span class="spacer"></span>
-    <div th:replace="~{fragments/user-switcher :: userSwitcher}"></div>
+    <div th:replace="~{fragments/user-switcher :: quyenBadge}"></div>
+    <div th:replace="~{fragments/user-switcher :: userSwitcher}" style="margin-left:12px"></div>
     <a class="btn" th:href="@{/}" style="margin-left:12px">Danh sách</a>
   </header>
+
+  <div class="app-shell">
+  <div th:replace="~{fragments/sidebar :: sidebar('list')}"></div>
+  <div class="content">
 
   <p class="crumb"><a th:href="@{/}">Danh sách</a> / <span class="id" th:text="${nc.soHieu}">KPH</span></p>
 
@@ -98,7 +103,23 @@
         <div class="body">
           <div class="actions" th:if="${!hanhDong.isEmpty()}"
                th:attr="data-actor=${currentUser != null ? currentUser.username() : 'qademo'}">
+            <!--
+              Gating theo vai trò (CHỈ thêm th:if; giữ nguyên logic hiển thị theo trạng thái):
+              - approve/reject NC Nặng: QA (nhà máy + tập đoàn); NC Nghiêm trọng: chỉ QA tập đoàn.
+              - containment: QA (nhà máy/tập đoàn).
+              - các nút người đề xuất (close-fast/escalate/submit-approval/resubmit/cancel/confirm-done/
+                verify-close/capa): mọi vai trò — không gating.
+              Backend vẫn giữ guard làm lớp cuối.
+            -->
             <button class="btn" th:each="h : ${hanhDong}"
+                    th:if="${(h.ma != 'approve' and h.ma != 'reject' and h.ma != 'containment')
+                             or (h.ma == 'containment' and quyen.laQa)
+                             or ((h.ma == 'approve' or h.ma == 'reject')
+                                 and nc.mucNghiemTrong == T(com.dqh.nccapa.common.enums.Severity).NGHIEM_TRONG
+                                 and quyen.laQaTapDoan)
+                             or ((h.ma == 'approve' or h.ma == 'reject')
+                                 and nc.mucNghiemTrong != T(com.dqh.nccapa.common.enums.Severity).NGHIEM_TRONG
+                                 and quyen.laQa)}"
                     th:classappend="${h.ma == 'reject' || h.ma == 'cancel'} ? 'danger' : ''"
                     th:data-action="${h.ma}" th:data-so="${nc.soHieu}"
                     th:text="${h.nhan}">Hành động</button>
@@ -150,6 +171,9 @@
         </div>
       </section>
     </div>
+  </div>
+
+  </div>
   </div>
 
   <script th:inline="javascript">

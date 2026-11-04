@@ -12,9 +12,14 @@
   <header class="topbar">
     <span class="brand">QLone<span class="sep">·</span>NC/CAPA</span>
     <span class="spacer"></span>
-    <div th:replace="~{fragments/user-switcher :: userSwitcher}"></div>
+    <div th:replace="~{fragments/user-switcher :: quyenBadge}"></div>
+    <div th:replace="~{fragments/user-switcher :: userSwitcher}" style="margin-left:12px"></div>
     <a class="btn" th:href="@{/}" style="margin-left:12px">Danh sách</a>
   </header>
+
+  <div class="app-shell">
+  <div th:replace="~{fragments/sidebar :: sidebar('create')}"></div>
+  <div class="content">
 
   <p class="crumb"><a th:href="@{/}">Danh sách</a> / Tạo phiếu</p>
 
@@ -55,6 +60,9 @@
     <button type="submit" class="btn btn-primary">Tạo phiếu NC</button>
     <p class="hint" id="err" style="color:var(--hold);display:none"></p>
   </form>
+
+  </div>
+  </div>
 
   <script th:inline="javascript">
     // Context path (prod: '/nc-capa/', local: '/'); @{/} tự thêm context path.

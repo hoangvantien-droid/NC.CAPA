@@ -195,3 +195,56 @@ dl.kv dd{margin:0}
 .ratio .big.bad{color:var(--bad)}
 .nav{display:flex;gap:16px}
 .nav a.on{font-weight:700;color:var(--ink)}
+
+/* ===== Phân quyền UI: layout sidebar + nội dung, huy hiệu quyền ===== */
+
+/* Huy hiệu "Đang xem với quyền: …" cạnh dropdown đổi tài khoản trên topbar */
+.quyen-badge{
+  display:inline-flex;align-items:center;gap:4px;
+  padding:4px 10px;border-radius:999px;font-size:12.5px;
+  background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.3);
+  color:#fff;white-space:nowrap;
+}
+.quyen-badge strong{font-weight:700}
+
+/* Khung 2 cột: sidebar trái cố định + vùng nội dung phải co giãn */
+.app-shell{display:grid;grid-template-columns:240px 1fr;align-items:start}
+.app-shell > .content{min-width:0}
+
+/* Sidebar navy */
+.sidebar{
+  background:var(--soft);border-right:1px solid var(--line);
+  min-height:calc(100vh - 60px);padding:16px 10px;
+}
+.side-nav{display:flex;flex-direction:column;gap:18px}
+.side-group{display:flex;flex-direction:column;gap:2px}
+.side-label{
+  font-size:11px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;
+  color:var(--faint);padding:4px 12px 2px;
+}
+.side-item{
+  display:flex;align-items:center;gap:10px;
+  padding:9px 12px;border-radius:8px;
+  color:var(--ink2);font-size:14px;font-weight:600;
+}
+.side-item:hover{background:#fff;text-decoration:none;color:var(--navy)}
+.side-item.on{background:var(--navy2);color:#fff}
+.side-item.on:hover{background:var(--navy3);color:#fff}
+.side-ic{
+  width:22px;height:22px;flex:none;display:inline-flex;align-items:center;justify-content:center;
+  font-size:13px;border-radius:6px;background:rgba(43,92,158,.12);color:var(--navy);
+}
+.side-item.on .side-ic{background:rgba(255,255,255,.22);color:#fff}
+
+/* Mobile: sidebar xếp trên, nội dung xuống dưới; menu nằm ngang cuộn được */
+@media (max-width:860px){
+  .app-shell{grid-template-columns:1fr}
+  .sidebar{min-height:0;border-right:none;border-bottom:1px solid var(--line);padding:10px}
+  .side-nav{flex-direction:row;flex-wrap:wrap;gap:8px}
+  .side-group{flex-direction:row;flex-wrap:wrap;align-items:center;gap:6px}
+  .side-label{display:none}
+  .side-item{padding:7px 10px}
+}
+@media (max-width:720px){
+  .quyen-badge{flex:1 1 100%;justify-content:center;margin-top:4px}
+}

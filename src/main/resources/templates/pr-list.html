@@ -11,15 +11,14 @@
 <body>
   <header class="topbar">
     <span class="brand">QLone<span class="sep">·</span>NC/CAPA</span>
-    <nav class="nav" style="margin-left:24px">
-      <a th:href="@{/}">Danh sách</a>
-      <a th:href="@{/dashboard}">Dashboard</a>
-      <a th:href="@{/pr}" class="on">PR</a>
-      <a th:href="@{/ticket}">Ticket</a>
-    </nav>
     <span class="spacer"></span>
-    <div th:replace="~{fragments/user-switcher :: userSwitcher}"></div>
+    <div th:replace="~{fragments/user-switcher :: quyenBadge}"></div>
+    <div th:replace="~{fragments/user-switcher :: userSwitcher}" style="margin-left:12px"></div>
   </header>
+
+  <div class="app-shell">
+  <div th:replace="~{fragments/sidebar :: sidebar('pr')}"></div>
+  <div class="content">
 
   <main class="wrap">
     <h2 style="font-size:16px;margin:20px 0 8px">Báo cáo vấn đề (PR)</h2>
@@ -38,5 +37,8 @@
       </tbody>
     </table>
   </main>
+
+  </div>
+  </div>
 </body>
 </html>

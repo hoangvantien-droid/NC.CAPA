@@ -11,13 +11,14 @@
 <body>
   <header class="topbar">
     <span class="brand">QLone<span class="sep">·</span>NC/CAPA</span>
-    <nav class="nav" style="margin-left:24px">
-      <a th:href="@{/}">Danh sách</a><a th:href="@{/dashboard}">Dashboard</a>
-      <a th:href="@{/pr}">PR</a><a th:href="@{/ticket}">Ticket</a>
-    </nav>
     <span class="spacer"></span>
-    <div th:replace="~{fragments/user-switcher :: userSwitcher}"></div>
+    <div th:replace="~{fragments/user-switcher :: quyenBadge}"></div>
+    <div th:replace="~{fragments/user-switcher :: userSwitcher}" style="margin-left:12px"></div>
   </header>
+
+  <div class="app-shell">
+  <div th:replace="~{fragments/sidebar :: sidebar('pr')}"></div>
+  <div class="content">
 
   <p class="crumb"><a th:href="@{/pr}">PR</a> / PR#<span th:text="${pr.id}">0</span></p>
 
@@ -79,8 +80,18 @@
       <section class="panel">
         <h2>Bước kế tiếp</h2>
         <div class="body">
+          <!--
+            Gating duyệt PR: nút approve/reject chỉ hiện khi vai trò user hiện tại khớp
+            vaiTroCanDuyet của cấp đang chờ. Ánh xạ: QA_TAP_DOAN → quyen.laQaTapDoan,
+            QA_NHA_MAY → quyen.laQaNhaMay; vai trò khác trong chuỗi duyệt → mặc định quyen.laQa
+            (server vẫn guard; UI chỉ ẩn khi chắc chắn không khớp). Các nút luồng còn lại không gating.
+          -->
           <div class="actions" th:if="${!hanhDong.isEmpty()}">
             <button class="btn" th:each="h : ${hanhDong}"
+                    th:if="${(h.ma != 'approve' and h.ma != 'reject')
+                             or (vaiTroCanDuyet == 'QA_TAP_DOAN' and quyen.laQaTapDoan)
+                             or (vaiTroCanDuyet == 'QA_NHA_MAY' and quyen.laQaNhaMay)
+                             or (vaiTroCanDuyet != 'QA_TAP_DOAN' and vaiTroCanDuyet != 'QA_NHA_MAY' and quyen.laQa)}"
                     th:classappend="${h.ma == 'reject'} ? 'danger' : ''"
                     th:data-action="${h.ma}" th:data-id="${pr.id}"
                     th:data-vaitro="${vaiTroCanDuyet}" th:text="${h.nhan}">Hành động</button>
@@ -102,6 +113,9 @@
         </div>
       </section>
     </div>
+  </div>
+
+  </div>
   </div>
 
   <script th:inline="javascript">

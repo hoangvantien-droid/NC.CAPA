@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Hàng chờ duyệt — NC/CAPA</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="/css/app.css"/>
+</head>
+<body>
+  <header class="topbar">
+    <span class="brand">QLone<span class="sep">·</span>NC/CAPA</span>
+    <span class="spacer"></span>
+    <div th:replace="~{fragments/user-switcher :: quyenBadge}"></div>
+    <div th:replace="~{fragments/user-switcher :: userSwitcher}" style="margin-left:12px"></div>
+    <a class="btn btn-primary" th:href="@{/nc/tao}" style="margin-left:12px">+ Tạo NC</a>
+  </header>
+
+  <div class="app-shell">
+  <div th:replace="~{fragments/sidebar :: sidebar('queue')}"></div>
+  <div class="content">
+
+  <section class="statusbar">
+    <div class="stat"><span class="num" th:text="${choDuyet}">0</span><span class="lbl">Chờ duyệt (PendingApproval)</span></div>
+    <div class="stat warn"><span class="num" th:text="${khoanhVung}">0</span><span class="lbl">Đang khoanh vùng</span></div>
+  </section>
+
+  <main class="wrap">
+    <h2 style="font-size:16px;margin:20px 0 8px">Hàng chờ duyệt</h2>
+    <p class="hint" style="margin-bottom:12px">Danh sách NC đang chờ duyệt hoặc đang khoanh vùng theo phạm vi nhà máy của bạn.</p>
+    <table>
+      <thead>
+        <tr>
+          <th>Số hiệu</th><th>Mức</th><th>Trạng thái</th>
+          <th>Loại</th><th>Nguồn</th><th>Lô kiểm</th><th>Nhà máy</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr th:each="n : ${dsNc}">
+          <td class="id"><a th:href="@{/nc/{s}(s=${n.soHieu})}" th:text="${n.soHieu}">KPH</a></td>
+          <td><span class="pill" th:classappend="'sev-' + ${n.mucNghiemTrong}"
+                    th:text="${n.mucNghiemTrong == T(com.dqh.nccapa.common.enums.Severity).NHE} ? 'Nhẹ'
+                           : (${n.mucNghiemTrong == T(com.dqh.nccapa.common.enums.Severity).NANG} ? 'Nặng' : 'Nghiêm trọng')">—</span></td>
+          <td><span class="pill st" th:classappend="'st-' + ${n.trangThai}" th:text="${n.trangThai}">—</span></td>
+          <td class="muted" th:text="${n.loaiNc}">—</td>
+          <td class="muted" th:text="${n.nguonPhatSinh}">—</td>
+          <td class="id muted" th:text="${n.loKiem} ?: '—'">—</td>
+          <td class="muted" th:text="${n.nhaMay}">—</td>
+        </tr>
+        <tr th:if="${dsNc.isEmpty()}">
+          <td colspan="7" class="empty">Không có phiếu nào đang chờ duyệt.</td>
+        </tr>
+      </tbody>
+    </table>
+  </main>
+
+  </div>
+  </div>
+</body>
+</html>

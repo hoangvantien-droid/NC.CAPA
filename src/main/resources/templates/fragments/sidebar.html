@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<body>
+  <!--
+    Sidebar điều hướng theo vai trò (phong cách QA Control Tower navy).
+    Cần model attribute: quyen (QuyenUi) — do DemoUserModelAdvice bơm vào mọi view.
+    Tham số: active = khóa mục đang mở (home/list/queue/pr/dashboard/ticket/admin/create).
+    Mỗi mục bọc th:if theo cờ quyền đúng ma trận phân quyền UI.
+  -->
+  <aside th:fragment="sidebar(active)" class="sidebar">
+    <nav class="side-nav">
+      <div class="side-group">
+        <div class="side-label">Luồng NC</div>
+        <a th:href="@{/nc/tao}" class="side-item" th:classappend="${active == 'create'} ? 'on' : ''">
+          <span class="side-ic">＋</span><span>Tạo NC</span>
+        </a>
+        <a th:href="@{/}" class="side-item" th:classappend="${active == 'list'} ? 'on' : ''">
+          <span class="side-ic">☰</span><span>Danh sách NC</span>
+        </a>
+        <a th:if="${quyen.laQa}" th:href="@{/cho-duyet}" class="side-item"
+           th:classappend="${active == 'queue'} ? 'on' : ''">
+          <span class="side-ic">⏳</span><span>Hàng chờ duyệt</span>
+        </a>
+      </div>
+
+      <div class="side-group" th:if="${quyen.laQa or quyen.laAdmin}">
+        <div class="side-label">CAPA &amp; PR</div>
+        <a th:if="${quyen.laQa or quyen.laAdmin}" th:href="@{/pr}" class="side-item"
+           th:classappend="${active == 'pr'} ? 'on' : ''">
+          <span class="side-ic">⇄</span><span>PR</span>
+        </a>
+      </div>
+
+      <div class="side-group" th:if="${quyen.laQa or quyen.laAdmin}">
+        <div class="side-label">Khác</div>
+        <a th:if="${quyen.laQa or quyen.laAdmin}" th:href="@{/dashboard}" class="side-item"
+           th:classappend="${active == 'dashboard'} ? 'on' : ''">
+          <span class="side-ic">▤</span><span>Dashboard</span>
+        </a>
+        <a th:if="${quyen.laQaTapDoan or quyen.laAdmin}" th:href="@{/ticket}" class="side-item"
+           th:classappend="${active == 'ticket'} ? 'on' : ''">
+          <span class="side-ic">✉</span><span>Ticket outbox</span>
+        </a>
+        <a th:if="${quyen.laAdmin}" th:href="@{/quan-tri}" class="side-item"
+           th:classappend="${active == 'admin'} ? 'on' : ''">
+          <span class="side-ic">⚙</span><span>Quản trị</span>
+        </a>
+      </div>
+    </nav>
+  </aside>
+</body>
+</html>

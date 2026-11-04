@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Quản trị — NC/CAPA</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="/css/app.css"/>
+</head>
+<body>
+  <header class="topbar">
+    <span class="brand">QLone<span class="sep">·</span>NC/CAPA</span>
+    <span class="spacer"></span>
+    <div th:replace="~{fragments/user-switcher :: quyenBadge}"></div>
+    <div th:replace="~{fragments/user-switcher :: userSwitcher}" style="margin-left:12px"></div>
+  </header>
+
+  <div class="app-shell">
+  <div th:replace="~{fragments/sidebar :: sidebar('admin')}"></div>
+  <div class="content">
+
+  <main class="wrap">
+    <h2 style="font-size:16px;margin:20px 0 8px">Quản trị hệ thống</h2>
+    <p class="hint" style="margin-bottom:16px">Nhập bộ mã lỗi (master data) từ file Excel. Chỉ quản trị viên truy cập được trang này.</p>
+
+    <section class="panel" style="max-width:560px">
+      <h2>Import bộ mã lỗi (.xlsx)</h2>
+      <div class="body">
+        <form id="import-form" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+          <input type="file" id="import-file" accept=".xlsx" required/>
+          <button class="btn btn-primary" type="submit">Nhập file</button>
+        </form>
+        <p class="hint" style="margin-top:10px">File xlsx theo mẫu bộ mã lỗi. Hệ thống sẽ báo số dòng nhập/bỏ qua sau khi xử lý.</p>
+        <pre id="import-result" class="id" style="display:none;margin-top:12px;padding:12px;background:#f8fafc;border:1px solid var(--line);border-radius:8px;white-space:pre-wrap"></pre>
+      </div>
+    </section>
+  </main>
+
+  </div>
+  </div>
+
+  <script th:inline="javascript">
+    // Context path (prod: '/nc-capa/', local: '/'); @{/} tự thêm context path.
+    window.CTX = (/*[[@{/}]]*/ '/').split(';')[0];
+  </script>
+  <script th:inline="none">
+    document.getElementById('import-form').addEventListener('submit', function(e){
+      e.preventDefault();
+      var fileEl = document.getElementById('import-file');
+      var out = document.getElementById('import-result');
+      if(!fileEl.files || fileEl.files.length === 0){ alert('Chọn file .xlsx trước.'); return; }
+      var fd = new FormData();
+      fd.append('file', fileEl.files[0]);
+      fetch(CTX + 'api/v1/masterdata/ma-loi/import', { method:'POST', body: fd })
+        .then(function(r){ return r.json(); })
+        .then(function(res){
+          out.style.display = 'block';
+          if(res.success){ out.textContent = 'Nhập thành công:\n' + JSON.stringify(res.data, null, 2); }
+          else { out.textContent = 'Không nhập được: ' + (res.error ? res.error.message : 'lỗi'); }
+        }).catch(function(err){ out.style.display='block'; out.textContent = 'Lỗi mạng: ' + err; });
+    });
+  </script>
+</body>
+</html>

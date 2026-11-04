@@ -11,14 +11,15 @@
 <body>
   <header class="topbar">
     <span class="brand">QLone<span class="sep">·</span>NC/CAPA</span>
-    <nav class="nav" style="margin-left:24px">
-      <a th:href="@{/}">Danh sách</a>
-      <a th:href="@{/dashboard}">Dashboard</a>
-    </nav>
     <span class="spacer"></span>
-    <div th:replace="~{fragments/user-switcher :: userSwitcher}"></div>
+    <div th:replace="~{fragments/user-switcher :: quyenBadge}"></div>
+    <div th:replace="~{fragments/user-switcher :: userSwitcher}" style="margin-left:12px"></div>
     <a class="btn" th:href="@{/}" style="margin-left:12px">Danh sách</a>
   </header>
+
+  <div class="app-shell">
+  <div th:replace="~{fragments/sidebar :: sidebar('list')}"></div>
+  <div class="content">
 
   <p class="crumb">
     <a th:href="@{/}">Danh sách</a> /
@@ -102,14 +103,20 @@
       <section class="panel">
         <h2>Bước kế tiếp</h2>
         <div class="body">
-          <div class="actions" th:if="${!hanhDong.isEmpty() or coKetQuaKiemChung}">
+          <!--
+            Gating theo vai trò: thao tác CAPA chỉ dành cho QA (nhà máy/tập đoàn).
+            Riêng dời hạn mốc kiểm chứng (postpone-reminder) chỉ QA tập đoàn.
+            Admin/SX/người báo cáo KHÔNG thấy nút thao tác. Backend vẫn guard.
+          -->
+          <div class="actions" th:if="${quyen.laQa and (!hanhDong.isEmpty() or coKetQuaKiemChung)}">
             <button class="btn" th:each="h : ${hanhDong}"
+                    th:if="${h.ma != 'postpone-reminder' or quyen.laQaTapDoan}"
                     th:classappend="${h.ma == 'mark-ineffective'} ? 'danger' : ''"
                     th:data-action="${h.ma}" th:data-id="${capa.id}" th:text="${h.nhan}">Hành động</button>
             <button class="btn" th:if="${coKetQuaKiemChung}"
                     th:data-action="'sua-ket-qua'" th:data-id="${capa.id}">Sửa kết quả kiểm chứng</button>
           </div>
-          <p class="empty" th:if="${hanhDong.isEmpty() and !coKetQuaKiemChung}">CAPA đã ở trạng thái cuối.</p>
+          <p class="empty" th:if="${!quyen.laQa or (hanhDong.isEmpty() and !coKetQuaKiemChung)}">Không có thao tác khả dụng.</p>
         </div>
       </section>
 
@@ -127,6 +134,9 @@
         </div>
       </section>
     </div>
+  </div>
+
+  </div>
   </div>
 
   <script th:inline="javascript">

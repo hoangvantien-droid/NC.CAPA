@@ -11,16 +11,15 @@
 <body>
   <header class="topbar">
     <span class="brand">QLone<span class="sep">·</span>NC/CAPA</span>
-    <nav class="nav" style="margin-left:24px">
-      <a th:href="@{/}" class="on">Danh sách</a>
-      <a th:href="@{/dashboard}">Dashboard</a>
-      <a th:href="@{/pr}">PR</a>
-      <a th:href="@{/ticket}">Ticket</a>
-    </nav>
     <span class="spacer"></span>
-    <div th:replace="~{fragments/user-switcher :: userSwitcher}"></div>
+    <div th:replace="~{fragments/user-switcher :: quyenBadge}"></div>
+    <div th:replace="~{fragments/user-switcher :: userSwitcher}" style="margin-left:12px"></div>
     <a class="btn btn-primary" th:href="@{/nc/tao}" style="margin-left:12px">+ Tạo NC</a>
   </header>
+
+  <div class="app-shell">
+  <div th:replace="~{fragments/sidebar :: sidebar('list')}"></div>
+  <div class="content">
 
   <section class="statusbar">
     <div class="stat"><span class="num" th:text="${dangMo}">0</span><span class="lbl">Phiếu đang mở</span></div>
@@ -59,5 +58,8 @@
       </tbody>
     </table>
   </main>
+
+  </div>
+  </div>
 </body>
 </html>

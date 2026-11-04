@@ -68,6 +68,55 @@ public class ViewController {
         return "dashboard";
     }
 
+    /**
+     * Landing theo vai trò: điều hướng user vừa đổi tài khoản tới màn mặc định của vai trò đó.
+     * KHÔNG đổi route {@code /} (giữ danh sách NC) để không vỡ test. {@code /home} chỉ redirect tới
+     * các route cụ thể nên không tạo vòng lặp.
+     */
+    @GetMapping("/home")
+    public String home(jakarta.servlet.http.HttpSession session) {
+        return switch (currentUser.hienTai(session).vaiTro()) {
+            case NGUOI_BAO_CAO -> "redirect:/nc/tao";
+            case BO_PHAN_SX -> "redirect:/";
+            case QA_NHA_MAY -> "redirect:/cho-duyet";
+            case QA_TAP_DOAN, ADMIN -> "redirect:/dashboard";
+        };
+    }
+
+    /**
+     * Hàng chờ duyệt: NC ở trạng thái PendingApproval/Containment theo scope nhà máy của user.
+     * Lọc bằng stream trên top 200 (chi phí không đáng kể), KHÔNG thêm query repo mới.
+     */
+    @GetMapping("/cho-duyet")
+    public String choDuyet(jakarta.servlet.http.HttpSession session, Model model) {
+        String nhaMayUser = roleChecker.nhaMayCua(currentUser.hienTai(session).username());
+        List<Nc> all = nhaMayUser == null
+                ? ncRepo.findTop200ByOrderByCreatedAtDesc()
+                : ncRepo.findTop200ByNhaMayOrderByCreatedAtDesc(nhaMayUser);
+        List<Nc> dsNc = all.stream()
+                .filter(n -> n.getTrangThai() == NcStatus.PendingApproval
+                        || n.getTrangThai() == NcStatus.Containment)
+                .toList();
+        model.addAttribute("dsNc", dsNc);
+        model.addAttribute("choDuyet", dsNc.stream()
+                .filter(n -> n.getTrangThai() == NcStatus.PendingApproval).count());
+        model.addAttribute("khoanhVung", dsNc.stream()
+                .filter(n -> n.getTrangThai() == NcStatus.Containment).count());
+        return "nc-queue";
+    }
+
+    /**
+     * Trang quản trị (import xlsx) — chỉ ADMIN. Gating mức UI: vai trò khác redirect về landing
+     * (KHÔNG phải guard bảo mật; endpoint import vẫn là lớp cuối).
+     */
+    @GetMapping("/quan-tri")
+    public String quanTri(jakarta.servlet.http.HttpSession session) {
+        if (!com.dqh.nccapa.demo.QuyenUi.tu(currentUser.hienTai(session).vaiTro()).laAdmin()) {
+            return "redirect:/home";
+        }
+        return "admin";
+    }
+
     @GetMapping("/")
     public String danhSach(jakarta.servlet.http.HttpSession session, Model model) {
         // SCOPE THEO NHÀ MÁY: user hiện tại (demo) gắn nhà máy cụ thể chỉ thấy NC nhà máy mình;
