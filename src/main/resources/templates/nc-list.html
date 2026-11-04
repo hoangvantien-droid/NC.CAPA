@@ -33,6 +33,7 @@
   </p>
 
   <main class="wrap">
+    <div class="table-wrap">
     <table>
       <thead>
         <tr>
@@ -46,9 +47,9 @@
           <td><span class="pill" th:classappend="'sev-' + ${n.mucNghiemTrong}"
                     th:text="${n.mucNghiemTrong == T(com.dqh.nccapa.common.enums.Severity).NHE} ? 'Nhẹ'
                            : (${n.mucNghiemTrong == T(com.dqh.nccapa.common.enums.Severity).NANG} ? 'Nặng' : 'Nghiêm trọng')">—</span></td>
-          <td><span class="pill st" th:classappend="'st-' + ${n.trangThai}" th:text="${n.trangThai}">—</span></td>
-          <td class="muted" th:text="${n.loaiNc}">—</td>
-          <td class="muted" th:text="${n.nguonPhatSinh}">—</td>
+          <td><span class="pill st" th:classappend="'st-' + ${n.trangThai}" th:text="${nhan.nc(n.trangThai)}">—</span></td>
+          <td class="muted" th:text="${nhan.loaiNc(n.loaiNc)}">—</td>
+          <td class="muted" th:text="${nhan.nguon(n.nguonPhatSinh)}">—</td>
           <td class="id muted" th:text="${n.loKiem} ?: '—'">—</td>
           <td class="muted" th:text="${n.nhaMay}">—</td>
         </tr>
@@ -57,6 +58,7 @@
         </tr>
       </tbody>
     </table>
+    </div>
   </main>
 
   </div>

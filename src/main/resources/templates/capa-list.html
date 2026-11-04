@@ -23,20 +23,22 @@
   <main class="wrap">
     <h2 style="font-size:16px;margin:20px 0 8px">CAPA</h2>
     <p class="hint" style="margin-bottom:12px">Danh sách phiếu CAPA (khắc phục &amp; phòng ngừa). Mở chi tiết để xem RCA, kế hoạch hành động và theo dõi hiệu quả.</p>
+    <div class="table-wrap">
     <table>
       <thead><tr><th>CAPA</th><th>Trạng thái</th><th>NC liên kết</th><th>Người điều tra</th><th>RPN</th><th>Chi phí đầu tư</th></tr></thead>
       <tbody>
         <tr th:each="c : ${dsCapa}">
           <td class="id"><a th:href="@{/capa/{id}(id=${c.id})}">CAPA#<span th:text="${c.id}">0</span></a></td>
-          <td><span class="pill st" th:text="${c.trangThai}">—</span></td>
+          <td><span class="pill st" th:text="${nhan.capa(c.trangThai)}">—</span></td>
           <td class="id muted" th:text="${#strings.listJoin(ncLinks.get(c.id), ', ')} ?: '—'">—</td>
           <td class="muted" th:text="${c.nguoiDieuTra} ?: '—'">—</td>
           <td class="id muted" th:text="${c.rpn()} ?: '—'">—</td>
-          <td class="id muted" th:text="${c.chiPhiDauTu} ?: '—'">—</td>
+          <td class="id muted" th:text="${c.chiPhiDauTu != null} ? ${#numbers.formatDecimal(c.chiPhiDauTu,0,'COMMA',0,'POINT')} + ' ₫' : '—'">—</td>
         </tr>
         <tr th:if="${dsCapa.isEmpty()}"><td colspan="6" class="empty">Chưa có CAPA. CAPA được mở từ NC (nút Mở CAPA) khi phiếu vào bước xử lý.</td></tr>
       </tbody>
     </table>
+    </div>
   </main>
 
   </div>

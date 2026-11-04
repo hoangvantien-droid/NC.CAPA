@@ -72,7 +72,7 @@
         <div class="body">
           <div class="bars">
             <div class="bar-row" th:each="e : ${d.theoTrangThai}">
-              <span class="k" th:text="${e.key}">—</span>
+              <span class="k" th:text="${nhan.nc(e.key)}">—</span>
               <span class="bar-track"><span class="bar-fill"
                     th:style="'width:' + ${#numbers.formatDecimal(e.value * 100.0 / d.max(d.theoTrangThai),0,0)} + '%'"></span></span>
               <span class="c" th:text="${e.value}">0</span>
@@ -88,7 +88,7 @@
         <div class="body">
           <div class="bars">
             <div class="bar-row" th:each="e : ${d.theoNguon}">
-              <span class="k" th:text="${e.key}">—</span>
+              <span class="k" th:text="${nhan.nguon(e.key)}">—</span>
               <span class="bar-track"><span class="bar-fill"
                     th:style="'width:' + ${#numbers.formatDecimal(e.value * 100.0 / d.max(d.theoNguon),0,0)} + '%'"></span></span>
               <span class="c" th:text="${e.value}">0</span>
@@ -104,7 +104,7 @@
         <div class="body">
           <div class="bars">
             <div class="bar-row" th:each="e : ${d.theoLoai}">
-              <span class="k" th:text="${e.key}">—</span>
+              <span class="k" th:text="${nhan.loaiNc(e.key)}">—</span>
               <span class="bar-track"><span class="bar-fill"
                     th:style="'width:' + ${#numbers.formatDecimal(e.value * 100.0 / d.max(d.theoLoai),0,0)} + '%'"></span></span>
               <span class="c" th:text="${e.value}">0</span>

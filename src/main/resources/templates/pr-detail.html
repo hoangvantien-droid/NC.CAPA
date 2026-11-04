@@ -29,10 +29,10 @@
         <div class="body">
           <div style="display:flex;gap:10px;align-items:center;margin-bottom:16px">
             <span class="id" style="font-size:17px;font-weight:600">PR#<span th:text="${pr.id}">0</span></span>
-            <span class="pill st" th:text="${pr.trangThai}">—</span>
+            <span class="pill st" th:text="${nhan.pr(pr.trangThai)}">—</span>
           </div>
           <dl class="kv">
-            <dt>Loại thay đổi</dt><dd th:text="${pr.loaiThayDoi}">—</dd>
+            <dt>Loại thay đổi</dt><dd th:text="${nhan.loaiThayDoi(pr.loaiThayDoi)}">—</dd>
             <dt>Mã hàng</dt><dd class="id" th:text="${pr.maHang} ?: '—'">—</dd>
             <dt>Mã lỗi</dt><dd class="id" th:text="${pr.maLoiId} ?: '—'">—</dd>
             <dt>NC liên kết</dt><dd>
@@ -49,29 +49,31 @@
           <ol style="margin:0;padding-left:20px">
             <li th:each="v,it : ${chuoi}"
                 th:style="${it.index < pr.capHienTai} ? 'color:var(--seal);font-weight:500' : (${it.index == pr.capHienTai and pr.trangThai.name() == 'PendingApproval'} ? 'font-weight:600' : 'color:var(--muted)')">
-              <span th:text="${v}">role</span>
+              <span th:text="${nhan.vaiTro(v)}">role</span>
               <span th:if="${it.index < pr.capHienTai}">✓ đã duyệt</span>
               <span th:if="${it.index == pr.capHienTai and pr.trangThai.name() == 'PendingApproval'}">← đang chờ</span>
             </li>
           </ol>
-          <p class="hint" th:if="${vaiTroCanDuyet != null}">Cấp hiện tại cần vai trò: <strong th:text="${vaiTroCanDuyet}">role</strong></p>
+          <p class="hint" th:if="${vaiTroCanDuyet != null}">Cấp hiện tại cần vai trò: <strong th:text="${nhan.vaiTro(vaiTroCanDuyet)}">role</strong></p>
         </div>
       </section>
 
       <section class="panel" th:if="${!lichSu.isEmpty()}">
         <h2>Lịch sử duyệt</h2>
         <div class="body">
+          <div class="table-wrap">
           <table>
             <thead><tr><th>Cấp</th><th>Vai trò</th><th>Kết quả</th><th>Người</th></tr></thead>
             <tbody>
               <tr th:each="l : ${lichSu}">
                 <td th:text="${l.cap} + 1">—</td>
-                <td class="muted" th:text="${l.vaiTro}">—</td>
-                <td><span class="pill" th:classappend="${l.ketQua == 'APPROVED'} ? 'sev-NHE' : 'sev-NGHIEM_TRONG'" th:text="${l.ketQua}">—</span></td>
+                <td class="muted" th:text="${nhan.vaiTro(l.vaiTro)}">—</td>
+                <td><span class="pill" th:classappend="${l.ketQua == 'APPROVED'} ? 'sev-NHE' : 'sev-NGHIEM_TRONG'" th:text="${nhan.ketQuaDuyet(l.ketQua)}">—</span></td>
                 <td class="muted" th:text="${l.nguoiDuyet}">—</td>
               </tr>
             </tbody>
           </table>
+          </div>
         </div>
       </section>
     </div>

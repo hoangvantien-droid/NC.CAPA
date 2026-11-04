@@ -22,13 +22,14 @@
   <div class="content">
 
   <section class="statusbar">
-    <div class="stat"><span class="num" th:text="${choDuyet}">0</span><span class="lbl">Chờ duyệt (PendingApproval)</span></div>
+    <div class="stat"><span class="num" th:text="${choDuyet}">0</span><span class="lbl">Chờ duyệt</span></div>
     <div class="stat warn"><span class="num" th:text="${khoanhVung}">0</span><span class="lbl">Đang khoanh vùng</span></div>
   </section>
 
   <main class="wrap">
     <h2 style="font-size:16px;margin:20px 0 8px">Hàng chờ duyệt</h2>
     <p class="hint" style="margin-bottom:12px">Danh sách NC đang chờ duyệt hoặc đang khoanh vùng theo phạm vi nhà máy của bạn.</p>
+    <div class="table-wrap">
     <table>
       <thead>
         <tr>
@@ -42,9 +43,9 @@
           <td><span class="pill" th:classappend="'sev-' + ${n.mucNghiemTrong}"
                     th:text="${n.mucNghiemTrong == T(com.dqh.nccapa.common.enums.Severity).NHE} ? 'Nhẹ'
                            : (${n.mucNghiemTrong == T(com.dqh.nccapa.common.enums.Severity).NANG} ? 'Nặng' : 'Nghiêm trọng')">—</span></td>
-          <td><span class="pill st" th:classappend="'st-' + ${n.trangThai}" th:text="${n.trangThai}">—</span></td>
-          <td class="muted" th:text="${n.loaiNc}">—</td>
-          <td class="muted" th:text="${n.nguonPhatSinh}">—</td>
+          <td><span class="pill st" th:classappend="'st-' + ${n.trangThai}" th:text="${nhan.nc(n.trangThai)}">—</span></td>
+          <td class="muted" th:text="${nhan.loaiNc(n.loaiNc)}">—</td>
+          <td class="muted" th:text="${nhan.nguon(n.nguonPhatSinh)}">—</td>
           <td class="id muted" th:text="${n.loKiem} ?: '—'">—</td>
           <td class="muted" th:text="${n.nhaMay}">—</td>
         </tr>
@@ -53,6 +54,7 @@
         </tr>
       </tbody>
     </table>
+    </div>
   </main>
 
   </div>

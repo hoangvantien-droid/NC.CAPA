@@ -28,6 +28,23 @@
   </div>
 
   <script th:inline="none">
+    // ====== LABELS: nhãn tiếng Việt cho option của modal (CHỈ đổi chữ hiển thị; value gửi lên server
+    // vẫn là tên enum backend). Đồng bộ với web/NhanHienThi.java. Mã lạ -> hiện nguyên mã. ======
+    window.LABELS = {
+      disposition: { REWORK:'Làm lại', RETURN_NCC:'Trả nhà cung cấp', HA_CAP:'Hạ cấp', TAI_CHE:'Tái chế', TIEU_HUY:'Tiêu huỷ' },
+      rca: { FIVE_WHY:'5 Why', FISHBONE:'Xương cá', IS_IS_NOT:'Is / Is not' },
+      nhom6m: { MAN:'Con người', MACHINE:'Máy móc', MATERIAL:'Nguyên vật liệu', METHOD:'Phương pháp', MEASURE:'Đo lường', ENVIRONMENT:'Môi trường' },
+      loaiAction: { TUC_THOI:'Khắc phục tức thời', NGAN_TAI_DIEN:'Ngăn tái diễn' },
+      loaiHanhDong: { CORRECTIVE:'Khắc phục', PREVENTIVE:'Phòng ngừa' },
+      ketQuaKiemChung: { HIEU_QUA:'Hiệu quả', KHONG_HIEU_QUA:'Không hiệu quả' }
+    };
+    // Dựng danh sách option {value, label} cho select của ActionModal từ danh sách mã enum.
+    window.labelOpts = function(group, values){
+      var m = window.LABELS[group] || {};
+      return values.map(function(v){ return { value:v, label:(m[v] != null ? m[v] : v) }; });
+    };
+  </script>
+  <script th:inline="none">
     // ====== ActionModal: engine modal form dùng chung (thuần JS) ======
     window.ActionModal = (function(){
       var overlay = document.getElementById('action-modal-overlay');

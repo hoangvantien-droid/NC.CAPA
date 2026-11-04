@@ -27,8 +27,7 @@
     <div class="field">
       <label for="loaiNc">Loại NC</label>
       <select id="loaiNc">
-        <option>THANH_PHAM</option><option>TRONG_SX</option><option>NVL</option>
-        <option>MOI_TRUONG</option><option>THIET_BI_DO</option><option>KHIEU_NAI</option>
+        <option th:each="m : ${ {'THANH_PHAM','TRONG_SX','NVL','MOI_TRUONG','THIET_BI_DO','KHIEU_NAI'} }" th:value="${m}" th:text="${nhan.loaiNc(m)}">THANH_PHAM</option>
       </select>
     </div>
     <div class="field">
@@ -57,7 +56,7 @@
       <label for="moTaLoi">Mô tả lỗi</label>
       <textarea id="moTaLoi" placeholder="Mô tả ngắn hiện tượng không phù hợp"></textarea>
     </div>
-    <button type="submit" class="btn btn-primary">Tạo phiếu NC</button>
+    <button type="submit" class="btn btn-primary" id="create-submit">Tạo phiếu NC</button>
     <p class="hint" id="err" style="color:var(--hold);display:none"></p>
   </form>
 
@@ -80,6 +79,10 @@
         loKiem: g('loKiem') || null, moTaLoi: g('moTaLoi') || null,
         chiTieu: [ { maLoiId: g('maLoiId'), maHang: g('maHang') || null } ]
       };
+      var sbtn = document.getElementById('create-submit');
+      if(sbtn.disabled) return; // chống double-submit
+      var sLabel = sbtn.textContent;
+      sbtn.disabled = true; sbtn.textContent = 'Đang gửi…';
       fetch(CTX + 'api/v1/nc', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) })
         .then(function(r){ return r.json(); })
         .then(function(res){
@@ -91,7 +94,7 @@
           }
         }).catch(function(err){
           var el = document.getElementById('err'); el.style.display='block'; el.textContent='Lỗi mạng: '+err;
-        });
+        }).finally(function(){ sbtn.disabled = false; sbtn.textContent = sLabel; });
     });
   </script>
 </body>

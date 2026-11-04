@@ -29,7 +29,7 @@
       <div class="body">
         <form id="import-form" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
           <input type="file" id="import-file" accept=".xlsx" required/>
-          <button class="btn btn-primary" type="submit">Nhập file</button>
+          <button class="btn btn-primary" type="submit" id="import-submit">Nhập file</button>
         </form>
         <p class="hint" style="margin-top:10px">File xlsx theo mẫu bộ mã lỗi. Hệ thống sẽ báo số dòng nhập/bỏ qua sau khi xử lý.</p>
         <pre id="import-result" class="id" style="display:none;margin-top:12px;padding:12px;background:#f8fafc;border:1px solid var(--line);border-radius:8px;white-space:pre-wrap"></pre>
@@ -52,6 +52,9 @@
       var fileEl = document.getElementById('import-file');
       var out = document.getElementById('import-result');
       if(!fileEl.files || fileEl.files.length === 0){ showToast('Chọn file .xlsx trước.', 'info'); return; }
+      var ibtn = document.getElementById('import-submit');
+      var iLabel = ibtn.textContent;
+      ibtn.disabled = true; ibtn.textContent = 'Đang gửi…';
       var fd = new FormData();
       fd.append('file', fileEl.files[0]);
       fetch(CTX + 'api/v1/masterdata/ma-loi/import', { method:'POST', body: fd })
@@ -60,7 +63,8 @@
           out.style.display = 'block';
           if(res.success){ out.textContent = 'Nhập thành công:\n' + JSON.stringify(res.data, null, 2); }
           else { out.textContent = 'Không nhập được: ' + (res.error ? res.error.message : 'lỗi'); }
-        }).catch(function(err){ out.style.display='block'; out.textContent = 'Lỗi mạng: ' + err; });
+        }).catch(function(err){ out.style.display='block'; out.textContent = 'Lỗi mạng: ' + err; })
+        .finally(function(){ ibtn.disabled = false; ibtn.textContent = iLabel; });
     });
   </script>
 </body>

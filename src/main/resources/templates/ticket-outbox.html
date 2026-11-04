@@ -24,6 +24,7 @@
   <main class="wrap">
     <h2 style="font-size:16px;margin:20px 0 8px">Hàng đợi callback về hệ ticket</h2>
     <p class="hint" style="margin-bottom:12px">Callback phản hồi cho CSKH ở 2 mốc: phản hồi sớm (NC xong xử lý / CAPA chốt kế hoạch) và đóng hồ sơ. Gửi lỗi sẽ thử lại; quá số lần sẽ vào hàng chờ lỗi.</p>
+    <div class="table-wrap">
     <table>
       <thead><tr><th>Ticket</th><th>Loại callback</th><th>Trạng thái</th><th>Số lần thử</th></tr></thead>
       <tbody>
@@ -38,6 +39,7 @@
         <tr th:if="${rows.isEmpty()}"><td colspan="4" class="empty">Chưa có callback nào. Đóng một NC nguồn khiếu nại để sinh callback.</td></tr>
       </tbody>
     </table>
+    </div>
   </main>
 
   </div>
@@ -51,11 +53,16 @@
   </script>
   <script th:inline="none">
     document.getElementById('flush').addEventListener('click', function(){
+      var btn = this;
+      if(btn.disabled) return; // chống double-submit
+      var label = btn.textContent;
+      btn.disabled = true; btn.textContent = 'Đang gửi…';
       fetch(CTX + 'api/v1/ticket/flush', { method:'POST' })
         .then(function(r){ return r.json(); })
         .then(function(res){ if(res.success){ showToast('Đã gửi ' + res.data + ' callback.', 'success'); location.reload(); }
           else { showToast('Lỗi: ' + (res.error ? res.error.message : ''), 'error'); } })
-        .catch(function(e){ showToast('Lỗi mạng: '+e, 'error'); });
+        .catch(function(e){ showToast('Lỗi mạng: '+e, 'error'); })
+        .finally(function(){ btn.disabled = false; btn.textContent = label; });
     });
   </script>
 </body>

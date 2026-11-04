@@ -34,7 +34,7 @@
         <div class="body">
           <div style="display:flex;gap:10px;align-items:center;margin-bottom:16px">
             <span class="id" style="font-size:17px;font-weight:600">CAPA#<span th:text="${capa.id}">0</span></span>
-            <span class="pill st" th:text="${capa.trangThai}">—</span>
+            <span class="pill st" th:text="${nhan.capa(capa.trangThai)}">—</span>
             <span class="pill" th:if="${capa.trangThai.name() == 'Ineffective'}"
                   style="background:var(--hold-weak);color:var(--hold)">Không hiệu quả</span>
           </div>
@@ -42,13 +42,13 @@
             <dt>Khắc phục tức thời</dt><dd th:text="${capa.khacPhucTucThoi} ?: '—'">—</dd>
             <dt>Ngăn tái diễn</dt><dd th:text="${capa.nganTaiDien} ?: '—'">—</dd>
             <dt>Nguyên nhân gốc</dt><dd th:text="${capa.rcaNoiDung} ?: '—'">—</dd>
-            <dt>Công cụ RCA</dt><dd th:text="${capa.rcaMethod} ?: '—'">—</dd>
+            <dt>Công cụ RCA</dt><dd th:text="${capa.rcaMethod != null} ? ${nhan.rca(capa.rcaMethod)} : '—'">—</dd>
             <dt>Chi tiết RCA</dt><dd th:text="${capa.rcaData} ?: '—'" style="white-space:pre-wrap;font-family:var(--mono);font-size:12.5px">—</dd>
-            <dt>Nhóm nguyên nhân (6M)</dt><dd th:text="${capa.nhomNguyenNhan6m} ?: (${capa.nhomNguyenNhan} ?: '—')">—</dd>
+            <dt>Nhóm nguyên nhân (6M)</dt><dd th:text="${capa.nhomNguyenNhan6m != null} ? ${nhan.nhom6m(capa.nhomNguyenNhan6m)} : (${capa.nhomNguyenNhan} ?: '—')">—</dd>
             <dt>Tái diễn</dt><dd th:text="${capa.taiDien} ? 'Có' : 'Không'">—</dd>
             <dt>Kế hoạch điều tra</dt><dd th:text="${capa.khMucTieu} ?: (${capa.keHoachDieuTra} ?: '—')">—</dd>
             <dt>RPN (S×O×D)</dt><dd th:text="${capa.rpn() != null} ? ${capa.rpn()} : '—'">—</dd>
-            <dt>Chi phí đầu tư</dt><dd th:text="${capa.chiPhiDauTu} ?: '—'">—</dd>
+            <dt>Chi phí đầu tư</dt><dd th:text="${capa.chiPhiDauTu != null} ? ${#numbers.formatDecimal(capa.chiPhiDauTu,0,'COMMA',0,'POINT')} + ' ₫' : '—'">—</dd>
             <dt>Mốc kiểm chứng</dt><dd>
               <span th:text="${capa.XNgay} != null ? ('X = ' + ${capa.XNgay} + ' ngày') : 'chưa đặt'">—</span>
               <span th:if="${capa.NLo != null}" th:text="' · N = ' + ${capa.NLo} + ' lô'"></span>
@@ -60,16 +60,17 @@
       <section class="panel">
         <h2>Action con</h2>
         <div class="body">
+          <div class="table-wrap">
           <table>
             <thead><tr><th>Loại</th><th>Loại HĐ</th><th>Mô tả</th><th>Phụ trách</th><th>Hạn</th><th>Trạng thái</th><th>File</th></tr></thead>
             <tbody>
               <tr th:each="a : ${actions}">
-                <td class="muted" th:text="${a.loai}">—</td>
-                <td class="muted" th:text="${a.loaiHanhDong}">—</td>
-                <td th:text="${a.moTa} ?: '—'" style="max-width:220px">—</td>
+                <td class="muted" th:text="${nhan.loaiAction(a.loai)}">—</td>
+                <td class="muted" th:text="${nhan.loaiHanhDong(a.loaiHanhDong)}">—</td>
+                <td th:text="${a.moTa} ?: '—'" style="max-width:220px;min-width:140px;white-space:normal;overflow-wrap:anywhere">—</td>
                 <td class="muted" th:text="${a.nguoiPhuTrach}">—</td>
                 <td class="muted" th:text="${a.deadline}">—</td>
-                <td><span class="pill st" th:text="${a.trangThai}">—</span>
+                <td><span class="pill st" th:text="${nhan.actionStatus(a.trangThai)}">—</span>
                   <button th:if="${a.trangThai.name() != 'Completed'}" class="btn"
                           style="padding:2px 8px;font-size:12px;margin-left:6px"
                           th:data-complete="${a.id}">Hoàn thành</button></td>
@@ -79,12 +80,14 @@
               <tr th:if="${actions.isEmpty()}"><td colspan="7" class="empty">Chưa có action.</td></tr>
             </tbody>
           </table>
+          </div>
         </div>
       </section>
 
       <section class="panel" th:if="${!steps8d.isEmpty()}">
         <h2>8D</h2>
         <div class="body">
+          <div class="table-wrap">
           <table>
             <thead><tr><th>Bước</th><th>Nội dung</th><th>Trạng thái</th></tr></thead>
             <tbody>
@@ -95,6 +98,7 @@
               </tr>
             </tbody>
           </table>
+          </div>
         </div>
       </section>
     </div>
@@ -173,11 +177,11 @@
         actorField() ] },
       'to-action-plan': { title:'Lập kế hoạch hành động', fields:[
         { label:'Công cụ RCA', name:'rcaMethod', type:'select', default:'FIVE_WHY',
-          options:['FIVE_WHY','FISHBONE','IS_IS_NOT'] },
+          options:labelOpts('rca', ['FIVE_WHY','FISHBONE','IS_IS_NOT']) },
         { label:'Nội dung RCA (JSON/text)', name:'rcaData', type:'textarea', default:'{"w1":"","w2":"","w3":""}' },
         { label:'Kết luận nguyên nhân gốc', name:'rcaNoiDung', type:'textarea' },
         { label:'Nhóm nguyên nhân (6M)', name:'nhomNguyenNhan6m', type:'select', default:'METHOD',
-          options:['MAN','MACHINE','MATERIAL','METHOD','MEASURE','ENVIRONMENT'] },
+          options:labelOpts('nhom6m', ['MAN','MACHINE','MATERIAL','METHOD','MEASURE','ENVIRONMENT']) },
         { label:'Vấn đề có tái diễn?', name:'taiDien', type:'checkbox', default:false },
         { label:'Chi phí đầu tư', name:'chiPhiDauTu', type:'number', min:0, default:0 },
         actorField() ] },
@@ -201,16 +205,16 @@
         actorField() ] },
       'add-action': { title:'Thêm action', fields:[
         { label:'Loại', name:'loai', type:'select', default:'NGAN_TAI_DIEN',
-          options:['TUC_THOI','NGAN_TAI_DIEN'] },
+          options:labelOpts('loaiAction', ['TUC_THOI','NGAN_TAI_DIEN']) },
         { label:'Loại hành động', name:'loaiHanhDong', type:'select', default:'CORRECTIVE',
-          options:['CORRECTIVE','PREVENTIVE'] },
+          options:labelOpts('loaiHanhDong', ['CORRECTIVE','PREVENTIVE']) },
         { label:'Mô tả', name:'moTa', type:'textarea', required:true },
         { label:'Người phụ trách', name:'nguoiPhuTrach', type:'text', required:true, default:'sx' },
         { label:'Hạn (deadline)', name:'deadline', type:'date', required:true },
         actorField() ] },
       'sua-ket-qua': { title:'Sửa kết quả kiểm chứng', fields:[
         { label:'Kết quả', name:'ketQua', type:'select', default:'HIEU_QUA',
-          options:['HIEU_QUA','KHONG_HIEU_QUA'] },
+          options:labelOpts('ketQuaKiemChung', ['HIEU_QUA','KHONG_HIEU_QUA']) },
         { label:'Biên bản kiểm tra (tuỳ chọn)', name:'bienBanKiemTra', type:'text' },
         { label:'Lý do', name:'lyDo', type:'text' },
         actorField() ] }

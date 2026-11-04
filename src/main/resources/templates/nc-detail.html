@@ -39,17 +39,18 @@
             <span class="pill" th:classappend="'sev-' + ${nc.mucNghiemTrong}"
                   th:text="${nc.mucNghiemTrong == T(com.dqh.nccapa.common.enums.Severity).NHE} ? 'Nhẹ'
                          : (${nc.mucNghiemTrong == T(com.dqh.nccapa.common.enums.Severity).NANG} ? 'Nặng' : 'Nghiêm trọng')">—</span>
-            <span class="pill st" th:classappend="'st-' + ${nc.trangThai}" th:text="${nc.trangThai}">—</span>
+            <span class="pill st" th:classappend="'st-' + ${nc.trangThai}" th:text="${nhan.nc(nc.trangThai)}">—</span>
           </div>
           <dl class="kv">
-            <dt>Loại NC</dt><dd th:text="${nc.loaiNc}">—</dd>
-            <dt>Nguồn phát sinh</dt><dd th:text="${nc.nguonPhatSinh}">—</dd>
+            <dt>Loại NC</dt><dd th:text="${nhan.loaiNc(nc.loaiNc)}">—</dd>
+            <dt>Nguồn phát sinh</dt><dd th:text="${nhan.nguon(nc.nguonPhatSinh)}">—</dd>
             <dt>Nhà máy</dt><dd th:text="${nc.nhaMay}">—</dd>
             <dt>Lô kiểm</dt><dd class="id" th:text="${nc.loKiem} ?: '—'">—</dd>
             <dt>Mã hàng chính</dt><dd class="id" th:text="${nc.maHangChinh} ?: '—'">—</dd>
             <dt>Mã lỗi chính</dt><dd class="id" th:text="${nc.maLoiChinh} ?: '—'">—</dd>
             <dt>An toàn TP</dt><dd th:text="${nc.foodSafety} ? 'Có' : 'Không'">—</dd>
-            <dt>Chi phí thực tế</dt><dd th:text="${nc.chiPhiThucTe} ?: '—'">—</dd>
+            <dt>Chi phí ước tính</dt><dd th:text="${nc.chiPhiUocTinh != null} ? ${#numbers.formatDecimal(nc.chiPhiUocTinh,0,'COMMA',0,'POINT')} + ' ₫' : '—'">—</dd>
+            <dt>Chi phí thực tế</dt><dd th:text="${nc.chiPhiThucTe != null} ? ${#numbers.formatDecimal(nc.chiPhiThucTe,0,'COMMA',0,'POINT')} + ' ₫' : '—'">—</dd>
           </dl>
         </div>
       </section>
@@ -135,7 +136,7 @@
           <ul style="list-style:none;margin:0;padding:0">
             <li th:each="c : ${capas}" style="padding:8px 0;border-bottom:1px solid var(--line)">
               <a th:href="@{/capa/{id}(id=${c.id})}">CAPA#<span th:text="${c.id}">0</span></a>
-              <span class="pill st" th:text="${c.trangThai}" style="margin-left:8px">—</span>
+              <span class="pill st" th:text="${nhan.capa(c.trangThai)}" style="margin-left:8px">—</span>
             </li>
           </ul>
         </div>
@@ -146,7 +147,7 @@
         <div class="body">
           <form id="att-form" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px">
             <input type="file" id="att-file" required/>
-            <button class="btn" type="submit">Tải lên</button>
+            <button class="btn" type="submit" id="att-submit">Tải lên</button>
           </form>
           <ul id="att-list" th:data-so="${nc.soHieu}" style="list-style:none;margin:0;padding:0">
             <li class="muted">Đang tải danh sách…</li>
@@ -215,7 +216,7 @@
       'submit-approval': { title:'Trình phê duyệt disposition', fields:[
         { label:'Nguyên nhân sơ bộ', name:'nguyenNhanSoBo', type:'textarea', required:true },
         { label:'Disposition đề xuất', name:'dispositionDeXuat', type:'select', default:'REWORK',
-          options:['REWORK','RETURN_NCC','HA_CAP','TAI_CHE','TIEU_HUY'] },
+          options:labelOpts('disposition', ['REWORK','RETURN_NCC','HA_CAP','TAI_CHE','TIEU_HUY']) },
         { label:'Chi phí ước tính', name:'chiPhiUocTinh', type:'number', required:true, min:0, default:0 },
         { label:'Bộ phận thực hiện', name:'boPhanThucHien', type:'text', required:true, default:'SX' },
         actorField() ] }
@@ -292,6 +293,9 @@
         if(!fileEl.files || fileEl.files.length === 0){ showToast('Chọn file trước.', 'info'); return; }
         // actor LẤY TỪ tài khoản hiện tại (bỏ prompt hỏi người tải).
         var actor = currentActor;
+        var attBtn = document.getElementById('att-submit');
+        var attLabel = attBtn.textContent;
+        attBtn.disabled = true; attBtn.textContent = 'Đang gửi…';
         var fd = new FormData();
         fd.append('doiTuong', 'NC');
         fd.append('doiTuongId', soHieu);
@@ -302,7 +306,8 @@
           .then(function(res){
             if(res.success){ fileEl.value=''; loadList(); }
             else { showToast('Không tải được: ' + (res.error ? res.error.message : 'lỗi'), 'error'); }
-          }).catch(function(e){ showToast('Lỗi mạng: '+e, 'error'); });
+          }).catch(function(e){ showToast('Lỗi mạng: '+e, 'error'); })
+          .finally(function(){ attBtn.disabled = false; attBtn.textContent = attLabel; });
       });
 
       loadList();
