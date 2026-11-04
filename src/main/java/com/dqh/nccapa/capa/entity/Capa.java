@@ -150,6 +150,7 @@ public class Capa {
     public void setHandoverDone(boolean v) { this.handoverDone = v; }
     public void setMonitoringBatDau(LocalDateTime v) { this.monitoringBatDau = v; }
     public void setNguoiDieuTra(String v) { this.nguoiDieuTra = v; }
+    public String getNguoiDieuTra() { return nguoiDieuTra; }
 
     /** RPN = s*o*d; phân loại ở service (REQ mục 3.2). */
     public Integer rpn() {

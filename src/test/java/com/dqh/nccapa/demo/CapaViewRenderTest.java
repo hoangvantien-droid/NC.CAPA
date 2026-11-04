@@ -1,4 +1,4 @@
-﻿package com.dqh.nccapa.demo;
+package com.dqh.nccapa.demo;
 
 import com.dqh.nccapa.capa.dto.AddActionRequest;
 import com.dqh.nccapa.capa.dto.CompleteActionRequest;
@@ -94,8 +94,8 @@ class CapaViewRenderTest extends MySqlTestBase {
         capaMonitoring = capaToMonitoring("LOT-CV-MON", 5, true);
 
         Long closed = capaToMonitoring("LOT-CV-CLOSED", 0, false);
-        jdbc.update("UPDATE capa SET monitoring_bat_dau = DATE_SUB(NOW(), INTERVAL 60 DAY) WHERE id = ?", closed);
-        jdbc.update("UPDATE capa_verification SET han_kiem_chung_tiep_theo = DATE_SUB(NOW(), INTERVAL 1 DAY) WHERE capa_id = ?", closed);
+        jdbc.update("UPDATE capa SET monitoring_bat_dau = '2020-01-01 00:00:00' WHERE id = ?", closed);
+        jdbc.update("UPDATE capa_verification SET han_kiem_chung_tiep_theo = '2020-02-29 00:00:00' WHERE capa_id = ?", closed);
         ConfirmEffectiveRequest cf = new ConfirmEffectiveRequest();
         cf.bienBanKiemTra = "BB kiểm tra thực tế"; cf.actor = "qa";
         capaService.confirmEffective(closed, cf);
@@ -173,12 +173,12 @@ class CapaViewRenderTest extends MySqlTestBase {
 
         AddActionRequest a1 = new AddActionRequest();
         a1.loai = ActionType.TUC_THOI; a1.moTa = "Cô lập lô hàng lỗi " + lo;
-        a1.nguoiPhuTrach = "sxmgp"; a1.deadline = LocalDate.now().plusDays(3); a1.actor = "qa";
+        a1.nguoiPhuTrach = "sxmgp"; a1.deadline = LocalDate.of(2099, 1, 3); a1.actor = "qa";
         CapaAction act = capaService.themAction(id, a1);
 
         AddActionRequest a2 = new AddActionRequest();
         a2.loai = ActionType.NGAN_TAI_DIEN; a2.moTa = "Đào tạo lại nhân sự " + lo;
-        a2.nguoiPhuTrach = "sxmgp"; a2.deadline = LocalDate.now().plusDays(10); a2.actor = "qa";
+        a2.nguoiPhuTrach = "sxmgp"; a2.deadline = LocalDate.of(2099, 1, 10); a2.actor = "qa";
         capaService.themAction(id, a2);
 
         ToProcessingRequest pp = new ToProcessingRequest();
