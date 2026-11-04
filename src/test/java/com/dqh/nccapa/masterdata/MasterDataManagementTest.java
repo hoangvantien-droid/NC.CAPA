@@ -273,11 +273,33 @@ class MasterDataManagementTest extends MySqlTestBase {
         }
         assertThat(dem("SELECT COUNT(*) FROM ma_loi")).isEqualTo(truoc);
         assertThat(dem("SELECT COUNT(*) FROM nhom_loi")).isEqualTo(nhomTruoc);
-        // admin qua duoc guard (file rac -> loi xu ly file, khong phai 403)
-        int st = mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
-                        .multipart("/api/v1/masterdata/ma-loi/import").file(file).session(as("admin")))
-                .andReturn().getResponse().getStatus();
-        assertThat(st).isNotEqualTo(403);
+        // admin qua guard: xlsx hop le toi thieu -> 200, DB them 1 nhom + 1 ma loi
+        byte[] xlsx;
+        try (org.apache.poi.ss.usermodel.Workbook wb = new org.apache.poi.xssf.usermodel.XSSFWorkbook()) {
+            org.apache.poi.ss.usermodel.Sheet nhom = wb.createSheet("NhomLoi");
+            dongXlsx(nhom, 0, "nhom_loi_id", "ten_nhom", "theo_nguon");
+            dongXlsx(nhom, 1, "TST", "Nhom test import", "Nhan hang");
+            org.apache.poi.ss.usermodel.Sheet ma = wb.createSheet("MaLoi");
+            dongXlsx(ma, 0, "ma_loi_id", "nhom_loi_id", "ten_ma_loi", "muc_nghiem_trong_default",
+                    "moi_nguy_default", "bat_buoc_khoanh_vung", "nhom_n_kiem_chung");
+            dongXlsx(ma, 1, "TST-01", "TST", "Ma loi test import", "NANG", "VAT_LY", "0", "SX_TP_NVL");
+            java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+            wb.write(out);
+            xlsx = out.toByteArray();
+        }
+        org.springframework.mock.web.MockMultipartFile hopLe = new org.springframework.mock.web.MockMultipartFile(
+                "file", "x.xlsx", "application/octet-stream", xlsx);
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                        .multipart("/api/v1/masterdata/ma-loi/import").file(hopLe).session(as("admin")))
+                .andExpect(status().isOk());
+        assertThat(dem("SELECT COUNT(*) FROM ma_loi")).isEqualTo(truoc + 1);
+        assertThat(dem("SELECT COUNT(*) FROM nhom_loi")).isEqualTo(nhomTruoc + 1);
+        assertThat(dem("SELECT COUNT(*) FROM ma_loi WHERE ma_loi_id='TST-01'")).isEqualTo(1);
+    }
+
+    private static void dongXlsx(org.apache.poi.ss.usermodel.Sheet sheet, int r, String... vals) {
+        org.apache.poi.ss.usermodel.Row row = sheet.createRow(r);
+        for (int c = 0; c < vals.length; c++) row.createCell(c).setCellValue(vals[c]);
     }
 
     @Test
