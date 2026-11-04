@@ -61,7 +61,7 @@ class DemoUserSwitchTest extends MySqlTestBase {
     void userMacDinh_laTaiKhoanDauTien() {
         HttpSession session = new MockHttpSession();
         DemoUser u = currentUser.hienTai(session);
-        assertThat(u.username()).isEqualTo("baocao");
+        assertThat(u.username()).isEqualTo("bcmgp");
     }
 
     @Test
@@ -78,7 +78,7 @@ class DemoUserSwitchTest extends MySqlTestBase {
         HttpSession session = new MockHttpSession();
         boolean ok = currentUser.doiUser(session, "khong-ton-tai");
         assertThat(ok).isFalse();
-        assertThat(currentUser.hienTai(session).username()).isEqualTo("baocao"); // vẫn mặc định
+        assertThat(currentUser.hienTai(session).username()).isEqualTo("bcmgp"); // vẫn mặc định
     }
 
     @Test
@@ -87,7 +87,7 @@ class DemoUserSwitchTest extends MySqlTestBase {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data", org.hamcrest.Matchers.hasSize(5)))
-                .andExpect(jsonPath("$.data[0].username").value("baocao"));
+                .andExpect(jsonPath("$.data[0].username").value("bcmgp"));
     }
 
     @Test

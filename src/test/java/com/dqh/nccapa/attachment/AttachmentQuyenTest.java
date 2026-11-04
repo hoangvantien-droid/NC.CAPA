@@ -64,7 +64,7 @@ class AttachmentQuyenTest extends MySqlTestBase {
         CapaAction action = AttachmentFixture.themAction(capaService, capa.getId()); // phụ trách: sxmgp
         actionId = action.getId();
         // Seed vai trò SAU khi dựng fixture để không đổi hành vi CapaService lúc tạo CAPA/action.
-        DefectSeed.seedUserRole(jdbc, "baocao", "NGUOI_BAO_CAO", "MGP");
+        DefectSeed.seedUserRole(jdbc, "bcmgp", "NGUOI_BAO_CAO", "MGP");
         DefectSeed.seedUserRole(jdbc, "sxmgp", "BO_PHAN_SX", "MGP");
         DefectSeed.seedUserRole(jdbc, "khomgp", "BO_PHAN_KHO", "MGP");
         DefectSeed.seedUserRole(jdbc, "qamgp", "QA_NHA_MAY", "MGP");
@@ -126,7 +126,7 @@ class AttachmentQuyenTest extends MySqlTestBase {
 
     @Test
     void ncNew_moiVaiTroNghiepVuDuoc_adminBiChan() throws Exception {
-        for (String u : List.of("baocao", "sxmgp", "khomgp", "qamgp", "qatd")) {
+        for (String u : List.of("bcmgp", "sxmgp", "khomgp", "qamgp", "qatd")) {
             phaiDuoc("NC", soNc, u, "New/" + u);
         }
         phaiBiChan("NC", soNc, "admin", "New/admin");
@@ -138,7 +138,7 @@ class AttachmentQuyenTest extends MySqlTestBase {
             datTrangThai(tt);
             phaiDuoc("NC", soNc, "qamgp", tt + "/qamgp");
             phaiDuoc("NC", soNc, "qatd", tt + "/qatd");
-            phaiBiChan("NC", soNc, "baocao", tt + "/baocao");
+            phaiBiChan("NC", soNc, "bcmgp", tt + "/bcmgp");
             phaiBiChan("NC", soNc, "sxmgp", tt + "/sxmgp");
             phaiBiChan("NC", soNc, "khomgp", tt + "/khomgp");
             phaiBiChan("NC", soNc, "admin", tt + "/admin");
@@ -152,7 +152,7 @@ class AttachmentQuyenTest extends MySqlTestBase {
             for (String u : List.of("qamgp", "qatd", "sxmgp", "khomgp")) {
                 phaiDuoc("NC", soNc, u, tt + "/" + u);
             }
-            phaiBiChan("NC", soNc, "baocao", tt + "/baocao");
+            phaiBiChan("NC", soNc, "bcmgp", tt + "/bcmgp");
             phaiBiChan("NC", soNc, "admin", tt + "/admin");
         }
     }
@@ -165,7 +165,7 @@ class AttachmentQuyenTest extends MySqlTestBase {
         phaiDuoc("ACTION", id, "qamgp", "action/qamgp");
         phaiDuoc("ACTION", id, "qatd", "action/qatd");
         phaiDuoc("ACTION", id, "sxmgp", "action/phu-trach");
-        phaiBiChan("ACTION", id, "baocao", "action/baocao");
+        phaiBiChan("ACTION", id, "bcmgp", "action/bcmgp");
         phaiBiChan("ACTION", id, "khomgp", "action/khomgp");
         phaiBiChan("ACTION", id, "admin", "action/admin");
     }
@@ -224,7 +224,7 @@ class AttachmentQuyenTest extends MySqlTestBase {
     void doc_moiVaiTroCungNhaMayXemTaiDuoc_khiNcDaDong() throws Exception {
         long id = service.luu("NC", soNc, txt(), "qamgp").getId();
         datTrangThai("Closed");
-        for (String u : List.of("baocao", "sxmgp", "khomgp", "qamgp", "qatd", "admin")) {
+        for (String u : List.of("bcmgp", "sxmgp", "khomgp", "qamgp", "qatd", "admin")) {
             assertThat(service.danhSach("NC", soNc, u)).as(u).hasSize(1);
             assertThat(service.taiVe(id, u).getAttachment().getId()).as(u).isEqualTo(id);
         }
@@ -272,7 +272,7 @@ class AttachmentQuyenTest extends MySqlTestBase {
     void ui_formUploadChiHienChoVaiTroDuocPhepTheoTrangThai() throws Exception {
         String url = "/nc/" + soNc;
         // New: mọi vai trò nghiệp vụ có form; admin không.
-        for (String u : List.of("baocao", "sxmgp", "qamgp", "qatd")) {
+        for (String u : List.of("bcmgp", "sxmgp", "qamgp", "qatd")) {
             assertThat(html(url, u)).as("New/" + u).contains("id=\"att-form\"");
         }
         assertThat(html(url, "admin")).doesNotContain("id=\"att-form\"");
@@ -281,14 +281,14 @@ class AttachmentQuyenTest extends MySqlTestBase {
         datTrangThai("PendingApproval");
         assertThat(html(url, "qamgp")).contains("id=\"att-form\"");
         assertThat(html(url, "qatd")).contains("id=\"att-form\"");
-        assertThat(html(url, "baocao")).doesNotContain("id=\"att-form\"");
+        assertThat(html(url, "bcmgp")).doesNotContain("id=\"att-form\"");
         assertThat(html(url, "sxmgp")).doesNotContain("id=\"att-form\"");
         assertThat(html(url, "admin")).doesNotContain("id=\"att-form\"");
 
         // Processing: thêm SX; người báo cáo vẫn không. Danh sách file luôn có.
         datTrangThai("Processing");
         assertThat(html(url, "sxmgp")).contains("id=\"att-form\"");
-        String bc = html(url, "baocao");
+        String bc = html(url, "bcmgp");
         assertThat(bc).doesNotContain("id=\"att-form\"");
         assertThat(bc).contains("id=\"att-list\"");
 

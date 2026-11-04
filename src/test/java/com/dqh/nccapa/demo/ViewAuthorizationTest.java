@@ -79,7 +79,7 @@ class ViewAuthorizationTest extends MySqlTestBase {
 
     @Test
     void baocao_khongThayNutDuyet_khongThayMenuHanCheQuyen() throws Exception {
-        String body = html("/nc/" + soNcNang, "baocao");
+        String body = html("/nc/" + soNcNang, "bcmgp");
         assertThat(body).doesNotContain("data-action=\"approve\"");
         assertThat(body).doesNotContain("data-action=\"reject\"");
         // sidebar không có các menu ngoài quyền người báo cáo
@@ -120,7 +120,7 @@ class ViewAuthorizationTest extends MySqlTestBase {
 
     @Test
     void home_baocao_redirectToTaoNc() throws Exception {
-        mockMvc.perform(get("/home").session(sessionCua("baocao")))
+        mockMvc.perform(get("/home").session(sessionCua("bcmgp")))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(header().string("Location", "/nc/tao"));
     }
@@ -152,7 +152,7 @@ class ViewAuthorizationTest extends MySqlTestBase {
     void quanTri_admin200_nonAdminRedirectHome() throws Exception {
         mockMvc.perform(get("/quan-tri").session(sessionCua("admin")))
                 .andExpect(status().isOk());
-        mockMvc.perform(get("/quan-tri").session(sessionCua("baocao")))
+        mockMvc.perform(get("/quan-tri").session(sessionCua("bcmgp")))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(header().string("Location", "/home"));
     }
@@ -170,7 +170,7 @@ class ViewAuthorizationTest extends MySqlTestBase {
         assertThat(html("/", "sxmgp")).contains("/capa\"");   // SX thấy lối vào CAPA
         assertThat(html("/", "qatd")).contains("/capa\"");    // QA tập đoàn thấy
         assertThat(html("/", "admin")).contains("/capa\"");   // Admin thấy (xem)
-        assertThat(html("/", "baocao")).doesNotContain("/capa\""); // người báo cáo không thấy
+        assertThat(html("/", "bcmgp")).doesNotContain("/capa\""); // người báo cáo không thấy
     }
 
     // ---- Gating duyệt PR: nút chỉ hiện khi vai trò UI khớp ĐÚNG cấp đang chờ ----

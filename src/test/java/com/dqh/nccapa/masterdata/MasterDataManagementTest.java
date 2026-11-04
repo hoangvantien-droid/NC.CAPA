@@ -158,7 +158,7 @@ class MasterDataManagementTest extends MySqlTestBase {
 
     private TaoNcRequest ncReq(String maLoi, String maHang) {
         TaoNcRequest r = new TaoNcRequest();
-        r.loaiNc = "THANH_PHAM"; r.nguonPhatSinh = NcSource.THU_CONG; r.nhaMay = "MGP"; r.nguoiBaoCao = "baocao";
+        r.loaiNc = "THANH_PHAM"; r.nguonPhatSinh = NcSource.THU_CONG; r.nhaMay = "MGP"; r.nguoiBaoCao = "bcmgp";
         TaoNcRequest.ChiTieuItem ct = new TaoNcRequest.ChiTieuItem();
         ct.maLoiId = maLoi; ct.maHang = maHang;
         r.chiTieu = List.of(ct);
@@ -242,7 +242,7 @@ class MasterDataManagementTest extends MySqlTestBase {
 
     @Test
     void vaiTroKhongPhaiAdmin_biChanCaViewLanEndpointGhi() throws Exception {
-        for (String u : List.of("baocao", "sxmgp", "qamgp", "qatd")) {
+        for (String u : List.of("bcmgp", "sxmgp", "qamgp", "qatd")) {
             mockMvc.perform(get("/quan-tri/master-data").session(as(u))).andExpect(status().is3xxRedirection());
             for (MasterDataLoai l : MasterDataLoai.values()) {
                 mockMvc.perform(get("/quan-tri/master-data/" + l.getSlug()).session(as(u)))
@@ -266,7 +266,7 @@ class MasterDataManagementTest extends MySqlTestBase {
         int nhomTruoc = dem("SELECT COUNT(*) FROM nhom_loi");
         org.springframework.mock.web.MockMultipartFile file = new org.springframework.mock.web.MockMultipartFile(
                 "file", "x.xlsx", "application/octet-stream", new byte[]{1, 2, 3});
-        for (String u : List.of("baocao", "sxmgp", "qamgp", "qatd")) {
+        for (String u : List.of("bcmgp", "sxmgp", "qamgp", "qatd")) {
             mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
                             .multipart("/api/v1/masterdata/ma-loi/import").file(file).session(as(u)))
                     .andExpect(status().isForbidden());

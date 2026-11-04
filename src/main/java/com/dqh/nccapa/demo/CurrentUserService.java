@@ -20,7 +20,7 @@ public class CurrentUserService {
 
     /** Danh sách tài khoản demo trải đủ các vai (người báo cáo, SX, QA nhà máy, QA tập đoàn, admin). */
     private static final List<DemoUser> USERS = List.of(
-            new DemoUser("baocao", "Nguyễn Văn Báo Cáo", DemoRole.NGUOI_BAO_CAO),
+            new DemoUser("bcmgp", "Nguyễn Văn Báo Cáo", DemoRole.NGUOI_BAO_CAO),
             new DemoUser("sxmgp", "Trần Sản Xuất", DemoRole.BO_PHAN_SX),
             new DemoUser("qamgp", "Lê QA Nhà Máy", DemoRole.QA_NHA_MAY),
             new DemoUser("qatd", "Phạm QA Tập Đoàn", DemoRole.QA_TAP_DOAN),

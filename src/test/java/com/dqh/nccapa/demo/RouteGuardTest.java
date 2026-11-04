@@ -37,7 +37,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 class RouteGuardTest extends MySqlTestBase {
 
-    private static final List<String> TAT_CA = List.of("baocao", "sxmgp", "qamgp", "qatd", "admin");
+    private static final List<String> TAT_CA = List.of("bcmgp", "sxmgp", "qamgp", "qatd", "admin");
 
     /** Vai trò ĐƯỢC vào từng route (ma trận menu đã chốt). */
     private static final Map<String, List<String>> DUOC = Map.of(
@@ -154,7 +154,7 @@ class RouteGuardTest extends MySqlTestBase {
     @Test
     void home_landingMoiVaiTro_laRouteVaiTroDoDuocVao_khongVongLap() throws Exception {
         Map<String, String> landing = Map.of(
-                "baocao", "/nc/tao", "sxmgp", "/", "qamgp", "/cho-duyet", "qatd", "/dashboard", "admin", "/dashboard");
+                "bcmgp", "/nc/tao", "sxmgp", "/", "qamgp", "/cho-duyet", "qatd", "/dashboard", "admin", "/dashboard");
         for (Map.Entry<String, String> e : landing.entrySet()) {
             mockMvc.perform(get("/home").session(sessionCua(e.getKey())))
                     .andExpect(status().is3xxRedirection())

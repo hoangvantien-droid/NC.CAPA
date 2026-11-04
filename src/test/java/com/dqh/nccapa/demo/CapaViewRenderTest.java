@@ -65,7 +65,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 class CapaViewRenderTest extends MySqlTestBase {
 
-    private static final List<String> VAI_TRO = List.of("baocao", "sxmgp", "qamgp", "qatd", "admin");
+    private static final List<String> VAI_TRO = List.of("bcmgp", "sxmgp", "qamgp", "qatd", "admin");
     /** Vai trò được vào /capa theo ma trận menu (người báo cáo bị chặn, redirect /home). */
     private static final List<String> VAI_TRO_CAPA = List.of("sxmgp", "qamgp", "qatd", "admin");
 
@@ -262,11 +262,11 @@ class CapaViewRenderTest extends MySqlTestBase {
 
     @Test
     void capa_baocao_biChan_redirectHome() throws Exception {
-        mockMvc.perform(get("/capa").session(sessionCua("baocao")))
+        mockMvc.perform(get("/capa").session(sessionCua("bcmgp")))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers
                         .header().string("Location", "/home"));
-        mockMvc.perform(get("/capa/" + capaOpen).session(sessionCua("baocao")))
+        mockMvc.perform(get("/capa/" + capaOpen).session(sessionCua("bcmgp")))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers
                         .header().string("Location", "/home"));
