@@ -66,6 +66,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class CapaViewRenderTest extends MySqlTestBase {
 
     private static final List<String> VAI_TRO = List.of("baocao", "sxmgp", "qamgp", "qatd", "admin");
+    /** Vai trò được vào /capa theo ma trận menu (người báo cáo bị chặn, redirect /home). */
+    private static final List<String> VAI_TRO_CAPA = List.of("sxmgp", "qamgp", "qatd", "admin");
 
     @Autowired MockMvc mockMvc;
     @Autowired CurrentUserService currentUser;
@@ -231,8 +233,8 @@ class CapaViewRenderTest extends MySqlTestBase {
     }
 
     @Test
-    void capaList_moiVaiTro_200_coDuLieu() throws Exception {
-        for (String u : VAI_TRO) {
+    void capaList_moiVaiTroCoQuyen_200_coDuLieu() throws Exception {
+        for (String u : VAI_TRO_CAPA) {
             String body = html("/capa", u);
             for (Long id : List.of(capaOpen, capaMonitoring, capaClosed, capaIneffective)) {
                 assertThat(body).as("role=%s capa=%s", u, id).contains("CAPA#<span>" + id + "</span>");
@@ -243,8 +245,8 @@ class CapaViewRenderTest extends MySqlTestBase {
     }
 
     @Test
-    void capaDetail_moiVaiTro_moiTrangThai_200() throws Exception {
-        for (String u : VAI_TRO) {
+    void capaDetail_moiVaiTroCoQuyen_moiTrangThai_200() throws Exception {
+        for (String u : VAI_TRO_CAPA) {
             for (Long id : List.of(capaOpen, capaMonitoring, capaClosed, capaIneffective)) {
                 String body = html("/capa/" + id, u);
                 assertThat(body).as("role=%s capa=%s", u, id).contains("Thông tin CAPA");
@@ -256,6 +258,18 @@ class CapaViewRenderTest extends MySqlTestBase {
             assertThat(mon).as("role=%s 8D", u).contains("Đã lập nhóm 8D");
             assertThat(mon).as("role=%s chi phí", u).contains("5,000,000 ₫");
         }
+    }
+
+    @Test
+    void capa_baocao_biChan_redirectHome() throws Exception {
+        mockMvc.perform(get("/capa").session(sessionCua("baocao")))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers
+                        .header().string("Location", "/home"));
+        mockMvc.perform(get("/capa/" + capaOpen).session(sessionCua("baocao")))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers
+                        .header().string("Location", "/home"));
     }
 
     @Test
@@ -291,7 +305,7 @@ class CapaViewRenderTest extends MySqlTestBase {
             assertThat(html("/pr/" + prId, u)).as("pr-detail role=%s", u).contains("PR#" + prId);
             assertThat(html("/capa", u)).as("menu PR role=%s", u).contains("href=\"/pr\"");
         }
-        // BO_PHAN_SX không có menu PR (ma trận UI); route /pr chỉ ẩn menu, không phải guard bảo mật.
+        // BO_PHAN_SX không có menu PR (ma trận UI) và route /pr cũng bị chặn ở server (xem RouteGuardTest).
         assertThat(html("/capa", "sxmgp")).doesNotContain("href=\"/pr\"").contains("href=\"/capa\"");
     }
 

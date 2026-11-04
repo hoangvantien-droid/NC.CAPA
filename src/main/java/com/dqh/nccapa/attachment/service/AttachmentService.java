@@ -2,7 +2,14 @@ package com.dqh.nccapa.attachment.service;
 
 import com.dqh.nccapa.attachment.entity.Attachment;
 import com.dqh.nccapa.attachment.repository.AttachmentRepository;
+import com.dqh.nccapa.capa.entity.CapaAction;
+import com.dqh.nccapa.capa.repository.CapaActionRepository;
+import com.dqh.nccapa.capa.repository.CapaRepository;
+import com.dqh.nccapa.common.audit.AuditService;
+import com.dqh.nccapa.common.enums.CapaStatus;
 import com.dqh.nccapa.common.error.BusinessException;
+import com.dqh.nccapa.nc.entity.Nc;
+import com.dqh.nccapa.nc.repository.NcRepository;
 import com.dqh.nccapa.config.AppProperties;
 import jakarta.annotation.PostConstruct;
 import org.springframework.core.io.PathResource;
@@ -60,9 +67,48 @@ public class AttachmentService {
     private final AttachmentRepository repo;
     private final AppProperties appProps;
 
-    public AttachmentService(AttachmentRepository repo, AppProperties appProps) {
+    private final NcRepository ncRepo;
+    private final CapaActionRepository actionRepo;
+    private final CapaRepository capaRepo;
+    private final AuditService audit;
+
+    public AttachmentService(AttachmentRepository repo, AppProperties appProps, NcRepository ncRepo,
+                             CapaActionRepository actionRepo, CapaRepository capaRepo, AuditService audit) {
         this.repo = repo;
         this.appProps = appProps;
+        this.ncRepo = ncRepo;
+        this.actionRepo = actionRepo;
+        this.capaRepo = capaRepo;
+        this.audit = audit;
+    }
+
+    /**
+     * Kiểm đối tượng đính kèm tồn tại và chưa ở trạng thái cuối. Chạy TRƯỚC khi ghi file ra đĩa.
+     * @return cặp (loại audit, id audit) để ghi vết sau khi lưu thành công.
+     */
+    private String[] kiemDoiTuong(String doiTuong, String doiTuongId) {
+        if ("NC".equals(doiTuong)) {
+            Nc nc = ncRepo.findById(doiTuongId)
+                    .orElseThrow(() -> BusinessException.notFound("Không tìm thấy NC: " + doiTuongId));
+            if (nc.getTrangThai().laKetThuc()) {
+                throw BusinessException.businessRule("Phiếu đã đóng/huỷ, không đính kèm thêm", "doiTuongId");
+            }
+            return new String[] {"NC", doiTuongId};
+        }
+        long actionId;
+        try {
+            actionId = Long.parseLong(doiTuongId.trim());
+        } catch (NumberFormatException e) {
+            throw BusinessException.notFound("Không tìm thấy action: " + doiTuongId);
+        }
+        CapaAction action = actionRepo.findById(actionId)
+                .orElseThrow(() -> BusinessException.notFound("Không tìm thấy action: " + doiTuongId));
+        capaRepo.findById(action.getCapaId()).ifPresent(capa -> {
+            if (capa.getTrangThai() == CapaStatus.Closed || capa.getTrangThai() == CapaStatus.Ineffective) {
+                throw BusinessException.businessRule("CAPA đã đóng/không hiệu quả, không đính kèm thêm", "doiTuongId");
+            }
+        });
+        return new String[] {"CAPA", String.valueOf(action.getCapaId())};
     }
 
     private Path baseDir() {
@@ -90,6 +136,9 @@ public class AttachmentService {
         if (file == null || file.isEmpty()) {
             throw BusinessException.businessRule("File rỗng", "file");
         }
+
+        // Tồn tại + trạng thái: kiểm trước khi đọc/ghi file để không sinh file mồ côi.
+        String[] dauVet = kiemDoiTuong(doiTuong, doiTuongId);
 
         // Đọc toàn bộ byte 1 lần: cần header để sniff magic + nội dung để ghi disk.
         byte[] data;
@@ -128,7 +177,13 @@ public class AttachmentService {
         Attachment att = new Attachment(
                 doiTuong, doiTuongId, tenGoc, tenLuu,
                 contentType, (long) data.length, nguoiTai, LocalDateTime.now());
-        return repo.save(att);
+        Attachment daLuu = repo.save(att);
+        // audit_log.nguoi_thuc_hien NOT NULL, gia_tri_moi tối đa 255 → chuẩn hoá trước khi ghi.
+        String nguoi = nguoiTai == null || nguoiTai.isBlank() ? "unknown" : nguoiTai;
+        String tenAudit = tenGoc.length() > 255 ? tenGoc.substring(0, 255) : tenGoc;
+        audit.log(dauVet[0], dauVet[1], "UPLOAD_ATTACHMENT", null, tenAudit,
+                "ACTION".equals(doiTuong) ? "action #" + doiTuongId : null, nguoi);
+        return daLuu;
     }
 
     /**

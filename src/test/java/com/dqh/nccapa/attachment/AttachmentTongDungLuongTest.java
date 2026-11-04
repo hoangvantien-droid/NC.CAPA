@@ -2,10 +2,14 @@ package com.dqh.nccapa.attachment;
 
 import com.dqh.nccapa.attachment.service.AttachmentService;
 import com.dqh.nccapa.common.error.BusinessException;
+import com.dqh.nccapa.nc.service.NcService;
+import com.dqh.nccapa.support.AttachmentFixture;
+import com.dqh.nccapa.support.DefectSeed;
 import com.dqh.nccapa.support.MySqlTestBase;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.TestPropertySource;
 
@@ -29,6 +33,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class AttachmentTongDungLuongTest extends MySqlTestBase {
 
     @Autowired AttachmentService service;
+    @Autowired NcService ncService;
+    @Autowired JdbcTemplate jdbc;
 
     @AfterEach
     void cleanup() throws Exception {
@@ -48,9 +54,11 @@ class AttachmentTongDungLuongTest extends MySqlTestBase {
         MockMultipartFile f1 = new MockMultipartFile("file", "a.txt", "text/plain", data);
         MockMultipartFile f2 = new MockMultipartFile("file", "b.txt", "text/plain", data);
 
-        service.luu("NC", "KPH-0200", f1, "qa"); // 60 <= 100 → OK
+        DefectSeed.seed(jdbc);
+        String so = AttachmentFixture.taoNc(ncService, "ATT-DL").getSoHieu();
+        service.luu("NC", so, f1, "qa"); // 60 <= 100 → OK
         // 60 (đã có) + 60 = 120 > 100 → từ chối
-        assertThatThrownBy(() -> service.luu("NC", "KPH-0200", f2, "qa"))
+        assertThatThrownBy(() -> service.luu("NC", so, f2, "qa"))
                 .isInstanceOf(BusinessException.class);
     }
 }

@@ -1,11 +1,19 @@
 package com.dqh.nccapa.attachment;
 
+import com.dqh.nccapa.capa.entity.Capa;
+import com.dqh.nccapa.capa.entity.CapaAction;
+import com.dqh.nccapa.capa.service.CapaService;
+import com.dqh.nccapa.nc.service.NcService;
+import com.dqh.nccapa.support.AttachmentFixture;
+import com.dqh.nccapa.support.DefectSeed;
 import com.dqh.nccapa.support.MySqlTestBase;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
@@ -38,6 +46,21 @@ class AttachmentHttpTest extends MySqlTestBase {
     private static final String UPLOAD_DIR = "target/test-uploads-http";
 
     @Autowired MockMvc mockMvc;
+    @Autowired NcService ncService;
+    @Autowired CapaService capaService;
+    @Autowired JdbcTemplate jdbc;
+
+    private String soNc;
+    private String actionId;
+
+    @BeforeEach
+    void seed() {
+        DefectSeed.seed(jdbc);
+        soNc = AttachmentFixture.taoNc(ncService, "ATT-HTTP").getSoHieu();
+        Capa capa = AttachmentFixture.taoCapaActionPlan(ncService, capaService, "ATT-HTTP-CAPA");
+        CapaAction action = AttachmentFixture.themAction(capaService, capa.getId());
+        actionId = String.valueOf(action.getId());
+    }
 
     @AfterEach
     void cleanup() throws Exception {
@@ -63,7 +86,7 @@ class AttachmentHttpTest extends MySqlTestBase {
         mockMvc.perform(multipart("/api/v1/attachment")
                         .file(file)
                         .param("doiTuong", "NC")
-                        .param("doiTuongId", "KPH-0100")
+                        .param("doiTuongId", soNc)
                         .param("actor", "qa"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
@@ -80,11 +103,34 @@ class AttachmentHttpTest extends MySqlTestBase {
         mockMvc.perform(multipart("/api/v1/attachment")
                         .file(file)
                         .param("doiTuong", "NC")
-                        .param("doiTuongId", "KPH-0101"))
+                        .param("doiTuongId", soNc))
                 .andExpect(status().isUnprocessableEntity())
                 .andExpect(jsonPath("$.success").value(false))
                 .andExpect(jsonPath("$.error.code").value("BUSINESS_RULE"))
                 .andExpect(jsonPath("$.error.field").value("file"));
+    }
+
+    @Test
+    void upload_ncKhongTonTai_tra404_khongGhiDb() throws Exception {
+        mockMvc.perform(multipart("/api/v1/attachment")
+                        .file(new MockMultipartFile("file", "a.txt", "text/plain", "a".getBytes(StandardCharsets.UTF_8)))
+                        .param("doiTuong", "NC")
+                        .param("doiTuongId", "KPH-KHONG-CO"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.success").value(false));
+        Integer n = jdbc.queryForObject("SELECT COUNT(*) FROM attachment", Integer.class);
+        org.assertj.core.api.Assertions.assertThat(n).isZero();
+    }
+
+    @Test
+    void upload_ncClosed_tra422() throws Exception {
+        jdbc.update("UPDATE nc SET trang_thai = ? WHERE so_hieu = ?", "Closed", soNc);
+        mockMvc.perform(multipart("/api/v1/attachment")
+                        .file(new MockMultipartFile("file", "a.txt", "text/plain", "a".getBytes(StandardCharsets.UTF_8)))
+                        .param("doiTuong", "NC")
+                        .param("doiTuongId", soNc))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.error.code").value("BUSINESS_RULE"));
     }
 
     @Test
@@ -95,7 +141,7 @@ class AttachmentHttpTest extends MySqlTestBase {
         MvcResult uploaded = mockMvc.perform(multipart("/api/v1/attachment")
                         .file(file)
                         .param("doiTuong", "NC")
-                        .param("doiTuongId", "KPH-0102"))
+                        .param("doiTuongId", soNc))
                 .andExpect(status().isOk())
                 .andReturn();
         Number idNum = com.jayway.jsonpath.JsonPath.read(
@@ -115,14 +161,14 @@ class AttachmentHttpTest extends MySqlTestBase {
         MockMultipartFile f2 = new MockMultipartFile(
                 "file", "b.txt", "text/plain", "bb".getBytes(StandardCharsets.UTF_8));
         mockMvc.perform(multipart("/api/v1/attachment").file(f1)
-                        .param("doiTuong", "ACTION").param("doiTuongId", "55"))
+                        .param("doiTuong", "ACTION").param("doiTuongId", actionId))
                 .andExpect(status().isOk());
         mockMvc.perform(multipart("/api/v1/attachment").file(f2)
-                        .param("doiTuong", "ACTION").param("doiTuongId", "55"))
+                        .param("doiTuong", "ACTION").param("doiTuongId", actionId))
                 .andExpect(status().isOk());
 
         mockMvc.perform(get("/api/v1/attachment")
-                        .param("doiTuong", "ACTION").param("doiTuongId", "55"))
+                        .param("doiTuong", "ACTION").param("doiTuongId", actionId))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data", hasSize(2)));

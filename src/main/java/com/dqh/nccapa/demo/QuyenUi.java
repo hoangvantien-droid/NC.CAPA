@@ -21,6 +21,33 @@ public record QuyenUi(boolean laNguoiBaoCao, boolean laSx, boolean laQaNhaMay,
         return laQaNhaMay || laQaTapDoan;
     }
 
+    // ---- Ma trận menu/route: MỘT nguồn quyết định dùng chung cho sidebar và guard route view ----
+
+    /** Hàng chờ duyệt: chỉ QA. */
+    public boolean thayChoDuyet() {
+        return laQa();
+    }
+
+    /** CAPA: SX (xem), QA, Admin (xem). */
+    public boolean thayCapa() {
+        return laSx || laQa() || laAdmin;
+    }
+
+    /** PR: QA, Admin (xem). */
+    public boolean thayPr() {
+        return laQa() || laAdmin;
+    }
+
+    /** Dashboard: QA, Admin. */
+    public boolean thayDashboard() {
+        return laQa() || laAdmin;
+    }
+
+    /** Ticket outbox: QA tập đoàn, Admin. */
+    public boolean thayTicket() {
+        return laQaTapDoan || laAdmin;
+    }
+
     /** Map 1-1 từ {@link DemoRole} sang bộ cờ quyền UI. */
     public static QuyenUi tu(DemoRole vaiTro) {
         return new QuyenUi(

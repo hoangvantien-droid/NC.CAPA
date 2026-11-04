@@ -65,7 +65,10 @@ public class ViewController {
 
     @GetMapping("/dashboard")
     public String dashboard(@org.springframework.web.bind.annotation.RequestParam(value = "nhaMay", required = false) String nhaMay,
-                            Model model) {
+                            jakarta.servlet.http.HttpSession session, Model model) {
+        if (!quyenCua(session).thayDashboard()) {
+            return "redirect:/home";
+        }
         model.addAttribute("d", reportService.dashboard(nhaMay));
         model.addAttribute("nhaMay", nhaMay);
         return "dashboard";
@@ -76,6 +79,11 @@ public class ViewController {
      * KHÔNG đổi route {@code /} (giữ danh sách NC) để không vỡ test. {@code /home} chỉ redirect tới
      * các route cụ thể nên không tạo vòng lặp.
      */
+    /** Cờ quyền menu/route của user hiện tại — cùng nguồn (QuyenUi) với sidebar. */
+    private com.dqh.nccapa.demo.QuyenUi quyenCua(jakarta.servlet.http.HttpSession session) {
+        return com.dqh.nccapa.demo.QuyenUi.tu(currentUser.hienTai(session).vaiTro());
+    }
+
     @GetMapping("/home")
     public String home(jakarta.servlet.http.HttpSession session) {
         return switch (currentUser.hienTai(session).vaiTro()) {
@@ -92,6 +100,9 @@ public class ViewController {
      */
     @GetMapping("/cho-duyet")
     public String choDuyet(jakarta.servlet.http.HttpSession session, Model model) {
+        if (!quyenCua(session).thayChoDuyet()) {
+            return "redirect:/home";
+        }
         String nhaMayUser = roleChecker.nhaMayCua(currentUser.hienTai(session).username());
         List<Nc> all = nhaMayUser == null
                 ? ncRepo.findTop200ByOrderByCreatedAtDesc()
@@ -114,7 +125,7 @@ public class ViewController {
      */
     @GetMapping("/quan-tri")
     public String quanTri(jakarta.servlet.http.HttpSession session) {
-        if (!com.dqh.nccapa.demo.QuyenUi.tu(currentUser.hienTai(session).vaiTro()).laAdmin()) {
+        if (!quyenCua(session).laAdmin()) {
             return "redirect:/home";
         }
         return "admin";
@@ -168,7 +179,10 @@ public class ViewController {
      * Chi tiết + thao tác CAPA vẫn ở {@code /capa/{id}} và được gating theo vai trò ở template.
      */
     @GetMapping("/capa")
-    public String capaList(Model model) {
+    public String capaList(jakarta.servlet.http.HttpSession session, Model model) {
+        if (!quyenCua(session).thayCapa()) {
+            return "redirect:/home";
+        }
         List<com.dqh.nccapa.capa.entity.Capa> dsCapa = capaRepo.findAll().stream()
                 .sorted(java.util.Comparator.comparing(
                         com.dqh.nccapa.capa.entity.Capa::getId,
@@ -185,7 +199,10 @@ public class ViewController {
     }
 
     @GetMapping("/capa/{id}")
-    public String capaDetail(@PathVariable("id") Long id, Model model) {
+    public String capaDetail(@PathVariable("id") Long id, jakarta.servlet.http.HttpSession session, Model model) {
+        if (!quyenCua(session).thayCapa()) {
+            return "redirect:/home";
+        }
         var capa = capaService.layCapa(id);
         model.addAttribute("capa", capa);
         model.addAttribute("actions", capaService.actionsCua(id));
@@ -224,13 +241,19 @@ public class ViewController {
     // ---- PR ----
 
     @GetMapping("/pr")
-    public String prList(Model model) {
+    public String prList(jakarta.servlet.http.HttpSession session, Model model) {
+        if (!quyenCua(session).thayPr()) {
+            return "redirect:/home";
+        }
         model.addAttribute("dsPr", prRepo.findTop200ByOrderByIdDesc());
         return "pr-list";
     }
 
     @GetMapping("/pr/{id}")
-    public String prDetail(@PathVariable("id") Long id, Model model) {
+    public String prDetail(@PathVariable("id") Long id, jakarta.servlet.http.HttpSession session, Model model) {
+        if (!quyenCua(session).thayPr()) {
+            return "redirect:/home";
+        }
         var pr = prService.lay(id);
         model.addAttribute("pr", pr);
         model.addAttribute("chuoi", pr.getLoaiThayDoi().chuoiDuyet());
@@ -272,7 +295,10 @@ public class ViewController {
     // ---- Ticket outbox ----
 
     @GetMapping("/ticket")
-    public String ticketOutbox(Model model) {
+    public String ticketOutbox(jakarta.servlet.http.HttpSession session, Model model) {
+        if (!quyenCua(session).thayTicket()) {
+            return "redirect:/home";
+        }
         model.addAttribute("rows", outboxRepo.findAll());
         return "ticket-outbox";
     }

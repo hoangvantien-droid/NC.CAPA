@@ -17,7 +17,7 @@
         <a th:href="@{/}" class="side-item" th:classappend="${active == 'list'} ? 'on' : ''">
           <span class="side-ic">☰</span><span>Danh sách NC</span>
         </a>
-        <a th:if="${quyen.laQa}" th:href="@{/cho-duyet}" class="side-item"
+        <a th:if="${quyen.thayChoDuyet}" th:href="@{/cho-duyet}" class="side-item"
            th:classappend="${active == 'queue'} ? 'on' : ''">
           <span class="side-ic">⏳</span><span>Hàng chờ duyệt</span>
         </a>
@@ -25,25 +25,25 @@
 
       <!-- Nhóm CAPA & PR: CAPA hiển cho SX (xem) / QA (có) / Admin (xem) theo ma trận;
            PR chỉ QA / Admin. Nhóm hiện khi có ít nhất 1 mục (SX trở lên, loại NGUOI_BAO_CAO). -->
-      <div class="side-group" th:if="${quyen.laSx or quyen.laQa or quyen.laAdmin}">
+      <div class="side-group" th:if="${quyen.thayCapa}">
         <div class="side-label">CAPA &amp; PR</div>
-        <a th:if="${quyen.laSx or quyen.laQa or quyen.laAdmin}" th:href="@{/capa}" class="side-item"
+        <a th:if="${quyen.thayCapa}" th:href="@{/capa}" class="side-item"
            th:classappend="${active == 'capa'} ? 'on' : ''">
           <span class="side-ic">✓</span><span>CAPA</span>
         </a>
-        <a th:if="${quyen.laQa or quyen.laAdmin}" th:href="@{/pr}" class="side-item"
+        <a th:if="${quyen.thayPr}" th:href="@{/pr}" class="side-item"
            th:classappend="${active == 'pr'} ? 'on' : ''">
           <span class="side-ic">⇄</span><span>PR</span>
         </a>
       </div>
 
-      <div class="side-group" th:if="${quyen.laQa or quyen.laAdmin}">
+      <div class="side-group" th:if="${quyen.thayDashboard or quyen.thayTicket or quyen.laAdmin}">
         <div class="side-label">Khác</div>
-        <a th:if="${quyen.laQa or quyen.laAdmin}" th:href="@{/dashboard}" class="side-item"
+        <a th:if="${quyen.thayDashboard}" th:href="@{/dashboard}" class="side-item"
            th:classappend="${active == 'dashboard'} ? 'on' : ''">
           <span class="side-ic">▤</span><span>Dashboard</span>
         </a>
-        <a th:if="${quyen.laQaTapDoan or quyen.laAdmin}" th:href="@{/ticket}" class="side-item"
+        <a th:if="${quyen.thayTicket}" th:href="@{/ticket}" class="side-item"
            th:classappend="${active == 'ticket'} ? 'on' : ''">
           <span class="side-ic">✉</span><span>Ticket outbox</span>
         </a>
