@@ -25,6 +25,7 @@ public class ViewController {
     private final AuditService audit;
     private final com.dqh.nccapa.report.ReportService reportService;
     private final com.dqh.nccapa.capa.service.CapaService capaService;
+    private final com.dqh.nccapa.capa.repository.CapaRepository capaRepo;
     private final com.dqh.nccapa.capa.repository.NcCapaLinkDao ncCapaLink;
     private final com.dqh.nccapa.capa.repository.CapaVerificationRepository verRepo;
     private final com.dqh.nccapa.pr.service.PrService prService;
@@ -37,6 +38,7 @@ public class ViewController {
     public ViewController(NcRepository ncRepo, NcService ncService, AuditService audit,
                           com.dqh.nccapa.report.ReportService reportService,
                           com.dqh.nccapa.capa.service.CapaService capaService,
+                          com.dqh.nccapa.capa.repository.CapaRepository capaRepo,
                           com.dqh.nccapa.capa.repository.NcCapaLinkDao ncCapaLink,
                           com.dqh.nccapa.capa.repository.CapaVerificationRepository verRepo,
                           com.dqh.nccapa.pr.service.PrService prService,
@@ -50,6 +52,7 @@ public class ViewController {
         this.audit = audit;
         this.reportService = reportService;
         this.capaService = capaService;
+        this.capaRepo = capaRepo;
         this.ncCapaLink = ncCapaLink;
         this.verRepo = verRepo;
         this.prService = prService;
@@ -158,6 +161,27 @@ public class ViewController {
     @GetMapping("/nc/tao")
     public String formTao() {
         return "nc-create";
+    }
+
+    /**
+     * Danh sách CAPA (chỉ đọc) — lối vào CAPA ở menu cho SX (xem) / QA / Admin theo ma trận quyền.
+     * Chi tiết + thao tác CAPA vẫn ở {@code /capa/{id}} và được gating theo vai trò ở template.
+     */
+    @GetMapping("/capa")
+    public String capaList(Model model) {
+        List<com.dqh.nccapa.capa.entity.Capa> dsCapa = capaRepo.findAll().stream()
+                .sorted(java.util.Comparator.comparing(
+                        com.dqh.nccapa.capa.entity.Capa::getId,
+                        java.util.Comparator.nullsLast(java.util.Comparator.reverseOrder())))
+                .toList();
+        model.addAttribute("dsCapa", dsCapa);
+        // Map capaId -> danh sách số hiệu NC liên kết (để hiển cột "NC liên kết").
+        java.util.Map<Long, List<String>> ncLinks = new java.util.HashMap<>();
+        for (com.dqh.nccapa.capa.entity.Capa c : dsCapa) {
+            ncLinks.put(c.getId(), ncCapaLink.ncSoHieuOfCapa(c.getId()));
+        }
+        model.addAttribute("ncLinks", ncLinks);
+        return "capa-list";
     }
 
     @GetMapping("/capa/{id}")

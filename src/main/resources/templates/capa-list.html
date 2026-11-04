@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>CAPA — Khắc phục &amp; phòng ngừa</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="/css/app.css"/>
+</head>
+<body>
+  <header class="topbar">
+    <span class="brand">QLone<span class="sep">·</span>NC/CAPA</span>
+    <span class="spacer"></span>
+    <div th:replace="~{fragments/user-switcher :: quyenBadge}"></div>
+    <div th:replace="~{fragments/user-switcher :: userSwitcher}" style="margin-left:12px"></div>
+  </header>
+
+  <div class="app-shell">
+  <div th:replace="~{fragments/sidebar :: sidebar('capa')}"></div>
+  <div class="content">
+
+  <main class="wrap">
+    <h2 style="font-size:16px;margin:20px 0 8px">CAPA</h2>
+    <p class="hint" style="margin-bottom:12px">Danh sách phiếu CAPA (khắc phục &amp; phòng ngừa). Mở chi tiết để xem RCA, kế hoạch hành động và theo dõi hiệu quả.</p>
+    <table>
+      <thead><tr><th>CAPA</th><th>Trạng thái</th><th>NC liên kết</th><th>Người điều tra</th><th>RPN</th><th>Chi phí đầu tư</th></tr></thead>
+      <tbody>
+        <tr th:each="c : ${dsCapa}">
+          <td class="id"><a th:href="@{/capa/{id}(id=${c.id})}">CAPA#<span th:text="${c.id}">0</span></a></td>
+          <td><span class="pill st" th:text="${c.trangThai}">—</span></td>
+          <td class="id muted" th:text="${#strings.listJoin(ncLinks.get(c.id), ', ')} ?: '—'">—</td>
+          <td class="muted" th:text="${c.nguoiDieuTra} ?: '—'">—</td>
+          <td class="id muted" th:text="${c.rpn()} ?: '—'">—</td>
+          <td class="id muted" th:text="${c.chiPhiDauTu} ?: '—'">—</td>
+        </tr>
+        <tr th:if="${dsCapa.isEmpty()}"><td colspan="6" class="empty">Chưa có CAPA. CAPA được mở từ NC (nút Mở CAPA) khi phiếu vào bước xử lý.</td></tr>
+      </tbody>
+    </table>
+  </main>
+
+  </div>
+  </div>
+</body>
+</html>

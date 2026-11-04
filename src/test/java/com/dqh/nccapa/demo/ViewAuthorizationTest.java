@@ -1,10 +1,15 @@
 package com.dqh.nccapa.demo;
 
+import com.dqh.nccapa.common.enums.LoaiThayDoi;
 import com.dqh.nccapa.common.enums.NcSource;
 import com.dqh.nccapa.nc.dto.SubmitApprovalRequest;
 import com.dqh.nccapa.nc.dto.TaoNcRequest;
 import com.dqh.nccapa.nc.entity.Nc;
 import com.dqh.nccapa.nc.service.NcService;
+import com.dqh.nccapa.pr.dto.PrActionRequest;
+import com.dqh.nccapa.pr.dto.TaoPrRequest;
+import com.dqh.nccapa.pr.entity.Pr;
+import com.dqh.nccapa.pr.service.PrService;
 import com.dqh.nccapa.support.DefectSeed;
 import com.dqh.nccapa.support.MySqlTestBase;
 import org.junit.jupiter.api.BeforeEach;
@@ -34,6 +39,7 @@ class ViewAuthorizationTest extends MySqlTestBase {
     @Autowired MockMvc mockMvc;
     @Autowired CurrentUserService currentUser;
     @Autowired NcService ncService;
+    @Autowired PrService prService;
     @Autowired JdbcTemplate jdbc;
 
     private String soNcNang;
@@ -44,6 +50,7 @@ class ViewAuthorizationTest extends MySqlTestBase {
         // Seed role THẬT cho người đề xuất + người duyệt (guard backend tra app_user_role).
         DefectSeed.seedUserRole(jdbc, "qamgp", "QA_NHA_MAY", "MGP");
         DefectSeed.seedUserRole(jdbc, "qatd", "QA_TAP_DOAN");
+        DefectSeed.seedUserRole(jdbc, "rd1", "R_AND_D");
 
         // Tạo 1 NC Nặng và đưa về PendingApproval để bước kế tiếp hiện nút approve/reject.
         Nc nc = taoNcNang("LOT-AUTHZ-1");
@@ -154,6 +161,44 @@ class ViewAuthorizationTest extends MySqlTestBase {
     void choDuyet_qaNhaMay_200() throws Exception {
         mockMvc.perform(get("/cho-duyet").session(sessionCua("qamgp")))
                 .andExpect(status().isOk());
+    }
+
+    // ---- Menu CAPA theo ma trận (SX xem / QA / Admin; người báo cáo KHÔNG thấy) ----
+
+    @Test
+    void menuCapa_sxQaAdminThay_baocaoKhongThay() throws Exception {
+        assertThat(html("/", "sxmgp")).contains("/capa\"");   // SX thấy lối vào CAPA
+        assertThat(html("/", "qatd")).contains("/capa\"");    // QA tập đoàn thấy
+        assertThat(html("/", "admin")).contains("/capa\"");   // Admin thấy (xem)
+        assertThat(html("/", "baocao")).doesNotContain("/capa\""); // người báo cáo không thấy
+    }
+
+    // ---- Gating duyệt PR: nút chỉ hiện khi vai trò UI khớp ĐÚNG cấp đang chờ ----
+
+    @Test
+    void duyetPr_qaTapDoanKhongThayNutDuyetKhiCapDangChoLaRandD() throws Exception {
+        // PR loại CONG_THUC: chuỗi duyệt R_AND_D -> QA_TAP_DOAN. Cấp 0 đang chờ = R_AND_D.
+        Long prId = taoPrPending(LoaiThayDoi.CONG_THUC, "SP001", "PRC-02");
+        // QA tập đoàn KHÔNG phải vai trò cấp hiện tại (R_AND_D) -> nút duyệt phải ẨN.
+        String qatdBody = html("/pr/" + prId, "qatd");
+        assertThat(qatdBody).doesNotContain("data-action=\"approve\"");
+        assertThat(qatdBody).doesNotContain("data-action=\"reject\"");
+
+        // Sau khi R_AND_D duyệt cấp 0, cấp hiện tại = QA_TAP_DOAN -> qatd thấy nút duyệt.
+        PrActionRequest ok = new PrActionRequest();
+        ok.actor = "rd1"; ok.vaiTro = "R_AND_D";
+        prService.approve(prId, ok);
+        assertThat(html("/pr/" + prId, "qatd")).contains("data-action=\"approve\"");
+    }
+
+    private Long taoPrPending(LoaiThayDoi loai, String maHang, String maLoi) {
+        TaoPrRequest r = new TaoPrRequest();
+        r.loaiThayDoi = loai; r.maHang = maHang; r.maLoiId = maLoi; r.actor = "qa";
+        Pr pr = prService.tao(r);
+        PrActionRequest a = new PrActionRequest(); a.actor = "qa";
+        prService.toAnalyzing(pr.getId(), a);
+        prService.submit(pr.getId(), a);
+        return pr.getId();
     }
 
     private Nc taoNcNang(String lo) {

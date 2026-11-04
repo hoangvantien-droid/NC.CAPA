@@ -81,17 +81,17 @@
         <h2>Bước kế tiếp</h2>
         <div class="body">
           <!--
-            Gating duyệt PR: nút approve/reject chỉ hiện khi vai trò user hiện tại khớp
-            vaiTroCanDuyet của cấp đang chờ. Ánh xạ: QA_TAP_DOAN → quyen.laQaTapDoan,
-            QA_NHA_MAY → quyen.laQaNhaMay; vai trò khác trong chuỗi duyệt → mặc định quyen.laQa
-            (server vẫn guard; UI chỉ ẩn khi chắc chắn không khớp). Các nút luồng còn lại không gating.
+            Gating duyệt PR: nút approve/reject CHỈ hiện khi vai trò UI khớp ĐÚNG vaiTroCanDuyet
+            của cấp đang chờ. Ánh xạ: QA_TAP_DOAN → quyen.laQaTapDoan, QA_NHA_MAY → quyen.laQaNhaMay.
+            Các cấp ngoài QA trong chuỗi duyệt (R_AND_D, PHAP_CHE, THU_MUA, GD_NHA_MAY_KY_THUAT)
+            KHÔNG có vai trò demo tương ứng → nút phải ẨN (không fallback quyen.laQa). Server vẫn
+            guard SoD làm lớp cuối. Các nút luồng còn lại (không phải approve/reject) không gating.
           -->
           <div class="actions" th:if="${!hanhDong.isEmpty()}">
             <button class="btn" th:each="h : ${hanhDong}"
                     th:if="${(h.ma != 'approve' and h.ma != 'reject')
                              or (vaiTroCanDuyet == 'QA_TAP_DOAN' and quyen.laQaTapDoan)
-                             or (vaiTroCanDuyet == 'QA_NHA_MAY' and quyen.laQaNhaMay)
-                             or (vaiTroCanDuyet != 'QA_TAP_DOAN' and vaiTroCanDuyet != 'QA_NHA_MAY' and quyen.laQa)}"
+                             or (vaiTroCanDuyet == 'QA_NHA_MAY' and quyen.laQaNhaMay)}"
                     th:classappend="${h.ma == 'reject'} ? 'danger' : ''"
                     th:data-action="${h.ma}" th:data-id="${pr.id}"
                     th:data-vaitro="${vaiTroCanDuyet}" th:text="${h.nhan}">Hành động</button>
