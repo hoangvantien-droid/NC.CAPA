@@ -62,8 +62,11 @@ public class CapaAction {
     public Long getId() { return id; }
     public Long getCapaId() { return capaId; }
     public ActionType getLoai() { return loai; }
+    public String getMoTa() { return moTa; }
+    public String getNguoiPhuTrach() { return nguoiPhuTrach; }
     public LocalDate getDeadline() { return deadline; }
     public ActionStatus getTrangThai() { return trangThai; }
+    public String getBangChung() { return bangChung; }
     public ActionCategory getLoaiHanhDong() { return loaiHanhDong; }
 
     public void setDeadline(LocalDate v) { this.deadline = v; }

@@ -41,6 +41,7 @@ public class Capa8dStep {
     public Long getId() { return id; }
     public Long getCapaId() { return capaId; }
     public String getBuoc() { return buoc; }
+    public String getNoiDung() { return noiDung; }
     public boolean isHoanThanh() { return hoanThanh; }
 
     public void hoanThanh(String noiDung, String nguoi) {
