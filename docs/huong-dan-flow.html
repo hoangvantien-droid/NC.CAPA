@@ -1,0 +1,542 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hướng dẫn luồng nghiệp vụ — NC/CAPA</title>
+<style>
+:root{
+  --brand:#2b5c9e; --brand-d:#1e4d8b; --brand-dd:#153c6e; --brand-l:#dbe7f5; --brand-ll:#eaf1fa;
+  --navy:#1e4d8b; --navy2:#2b5c9e; --navy3:#153c6e; --soft:#eaf1fa;
+  --bg:#eef2f7; --card:#fff; --ink:#0f172a; --ink2:#334155; --mute:#64748b; --faint:#94a3b8;
+  --line:#e6ebf1; --line2:#cfd8e3;
+  --ok:#15803d; --ok-l:#dcfce7; --ok-t:#166534;
+  --warn:#b45309; --warn-l:#fef3c7; --warn-t:#92400e;
+  --bad:#b91c1c; --bad-l:#fee2e2; --bad-t:#991b1b;
+  --teal:#0e7490; --purple:#6d28d9; --orange:#c2410c;
+  --sh:0 1px 2px rgba(15,23,42,.06),0 4px 12px -4px rgba(15,23,42,.08);
+  --sh2:0 8px 30px -8px rgba(15,23,42,.22);
+  --r:10px;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:14px/1.55 "Be Vietnam Pro",-apple-system,"Segoe UI",Roboto,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+
+/* Header */
+.hdr{display:flex;align-items:center;gap:14px;padding:0 22px;height:60px;
+  background:linear-gradient(118deg,var(--navy3) 0%,var(--navy2) 62%,#356bb0 100%);
+  color:#fff;box-shadow:0 2px 14px rgba(15,23,42,.22);position:sticky;top:0;z-index:20}
+.hdr .mark{width:34px;height:34px;border-radius:9px;background:rgba(255,255,255,.16);
+  border:1px solid rgba(255,255,255,.25);display:grid;place-items:center;font-weight:800}
+.hdr b{font-size:15px;font-weight:800;letter-spacing:-.3px}
+.hdr b span{display:block;font-size:10.5px;color:rgba(255,255,255,.75);font-weight:600}
+.hdr .sp{flex:1}
+.hdr .tag{background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.3);
+  border-radius:999px;font-size:11px;font-weight:700;padding:5px 11px}
+
+/* Layout */
+.wrap{display:grid;grid-template-columns:230px minmax(0,1fr);gap:0;align-items:start}
+.side{position:sticky;top:60px;align-self:start;height:calc(100vh - 60px);overflow:auto;
+  background:#fff;border-right:1px solid var(--line);padding:12px 10px}
+.side .grp{font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;
+  color:var(--faint);padding:14px 10px 5px}
+.side a{display:flex;align-items:center;gap:9px;padding:9px 11px;border-radius:8px;
+  color:var(--ink2);font-weight:600;font-size:13px;cursor:pointer;margin-bottom:2px;
+  border:1px solid transparent;text-decoration:none}
+.side a:hover{background:var(--soft);color:var(--navy2)}
+.side a.on{background:var(--soft);color:var(--navy);border-color:#c3d6ee;font-weight:700}
+.side a .n{width:22px;height:22px;border-radius:6px;background:var(--brand-l);color:var(--brand-d);
+  display:grid;place-items:center;font-size:11px;font-weight:800;flex:none}
+.main{padding:22px 26px 80px;min-width:0}
+
+/* Page head */
+.phead h1{margin:0;font-size:22px;font-weight:800;letter-spacing:-.5px;color:#182236}
+.phead p{margin:6px 0 0;color:var(--mute);font-size:13.5px}
+
+/* Intro / stepper selector */
+.tabs{display:flex;flex-wrap:wrap;gap:8px;margin:18px 0 20px}
+.tabs button{border:1px solid var(--line2);background:#fff;border-radius:999px;padding:8px 15px;
+  font:inherit;font-size:12.5px;font-weight:700;color:var(--ink2);cursor:pointer}
+.tabs button:hover{border-color:var(--navy2);color:var(--navy2)}
+.tabs button.on{background:var(--navy2);color:#fff;border-color:var(--navy2)}
+
+.flow{display:none}
+.flow.on{display:block;animation:fade .2s ease}
+@keyframes fade{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+
+.flow-desc{background:var(--brand-ll);border:1px solid #c3d6ee;border-radius:var(--r);
+  padding:12px 15px;color:var(--navy);font-size:13px;margin-bottom:18px}
+.flow-desc b{color:var(--navy3)}
+
+/* Stepper */
+.steps{display:flex;flex-direction:column;gap:0}
+.step{position:relative;padding:0 0 4px 46px;cursor:pointer}
+.step::before{content:'';position:absolute;left:15px;top:30px;bottom:-6px;width:2px;background:var(--line2)}
+.step:last-child::before{display:none}
+.step .dot{position:absolute;left:4px;top:4px;width:24px;height:24px;border-radius:50%;
+  background:#fff;border:2px solid var(--navy2);color:var(--navy2);display:grid;place-items:center;
+  font-size:11px;font-weight:800;z-index:2}
+.step.done .dot{background:var(--navy2);color:#fff}
+.step-card{background:#fff;border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--sh);
+  margin-bottom:12px;overflow:hidden}
+.step-head{display:flex;align-items:center;gap:10px;padding:12px 15px}
+.step-head .st-from,.step-head .st-to{font-size:11px;font-weight:800;padding:2px 9px;border-radius:999px;
+  background:#eef2f7;color:var(--ink2);border:1px solid var(--line2);white-space:nowrap}
+.step-head .arrow{color:var(--faint);font-weight:900}
+.step-head .ttl{font-weight:700;color:#243047;font-size:14px}
+.step-head .ep{margin-left:auto;font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  font-size:11.5px;color:var(--navy2);background:var(--brand-ll);border:1px solid #c3d6ee;
+  border-radius:6px;padding:3px 8px;white-space:nowrap}
+.step-head .chev{color:var(--faint);transition:.2s}
+.step.open .step-head .chev{transform:rotate(180deg)}
+.step-body{display:none;padding:0 15px 15px;border-top:1px solid var(--line)}
+.step.open .step-body{display:block}
+.step-body .guard{margin:12px 0;padding:10px 13px;border-radius:8px;font-size:12.5px;
+  background:var(--warn-l);border:1px solid #fde68a;color:var(--warn-t)}
+.step-body .guard b{color:#7c3a00}
+
+/* Fields table */
+.ftbl{width:100%;border-collapse:collapse;margin-top:12px;font-size:13px}
+.ftbl th{text-align:left;font-size:11px;font-weight:700;color:var(--ink2);text-transform:uppercase;
+  letter-spacing:.3px;padding:8px 10px;background:#f8fafc;border-bottom:1px solid var(--line2)}
+.ftbl td{padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+.ftbl tr:last-child td{border-bottom:0}
+.ftbl .fname{font-weight:700;color:#243047;white-space:nowrap}
+.ftbl .ftype{font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace;font-size:11.5px;color:var(--teal)}
+.req{display:inline-block;font-size:10px;font-weight:800;padding:1px 7px;border-radius:999px;
+  background:var(--bad-l);color:var(--bad-t);border:1px solid #fecaca}
+.opt{display:inline-block;font-size:10px;font-weight:800;padding:1px 7px;border-radius:999px;
+  background:#eef2f7;color:var(--mute);border:1px solid var(--line2)}
+.cond{display:inline-block;font-size:10px;font-weight:800;padding:1px 7px;border-radius:999px;
+  background:var(--warn-l);color:var(--warn-t);border:1px solid #fde68a}
+
+/* Severity legend pills */
+.sev{display:inline-block;padding:2px 10px;border-radius:999px;font-size:12px;font-weight:700;border:1px solid transparent}
+.sev.nhe{background:var(--ok-l);color:var(--ok-t);border-color:#bbf7d0}
+.sev.nang{background:var(--warn-l);color:var(--warn-t);border-color:#fde68a}
+.sev.nt{background:var(--bad-l);color:var(--bad-t);border-color:#fecaca}
+
+.legend{display:flex;flex-wrap:wrap;gap:16px;background:#fff;border:1px solid var(--line);
+  border-radius:var(--r);box-shadow:var(--sh);padding:14px 16px;margin-bottom:18px;font-size:12.5px;color:var(--ink2)}
+.legend .lg{display:flex;align-items:center;gap:7px}
+
+.note{font-size:12px;color:var(--mute);margin-top:6px}
+.exp{font-size:12.5px;color:var(--ink2);margin:10px 0 2px}
+
+@media (max-width:860px){
+  .wrap{grid-template-columns:1fr}
+  .side{position:static;height:auto;border-right:0;border-bottom:1px solid var(--line);
+    display:flex;flex-wrap:wrap;gap:6px}
+  .side .grp{width:100%}
+}
+</style>
+</head>
+<body>
+
+<header class="hdr">
+  <div class="mark">NC</div>
+  <b>NC/CAPA <span>Hướng dẫn luồng nghiệp vụ &amp; trường bắt buộc</span></b>
+  <span class="sp"></span>
+  <span class="tag">QA Nhà máy Thực phẩm</span>
+</header>
+
+<div class="wrap">
+  <nav class="side" id="side">
+    <div class="grp">Luồng NC</div>
+    <a data-go="f-nhanh" class="on"><span class="n">1</span> Luồng Nhanh (Nhẹ)</a>
+    <a data-go="f-xemxet"><span class="n">2</span> Luồng Có xem xét (Nặng)</a>
+    <a data-go="f-khoanh"><span class="n">3</span> Luồng Khoanh vùng (Nghiêm trọng)</a>
+    <div class="grp">CAPA</div>
+    <a data-go="f-capa"><span class="n">4</span> Vòng đời CAPA</a>
+    <div class="grp">Khác</div>
+    <a data-go="f-pr"><span class="n">5</span> Yêu cầu thay đổi (PR)</a>
+    <a data-go="f-ref"><span class="n">i</span> Chú giải &amp; quy ước</a>
+  </nav>
+
+  <main class="main">
+    <div class="phead">
+      <h1 id="pttl">Luồng Nhanh — NC Nhẹ</h1>
+      <p id="pdesc">Chọn một luồng ở menu trái. Bấm vào từng bước để xem các trường phải điền.</p>
+    </div>
+
+    <div class="legend">
+      <span style="font-weight:700;color:#243047">Mức nghiêm trọng:</span>
+      <span class="lg"><span class="sev nhe">Nhẹ</span> đóng nhanh được</span>
+      <span class="lg"><span class="sev nang">Nặng</span> cần duyệt 2 cấp</span>
+      <span class="lg"><span class="sev nt">Nghiêm trọng</span> khoanh vùng + QA tập đoàn</span>
+      <span class="lg"><span class="req">BẮT BUỘC</span></span>
+      <span class="lg"><span class="cond">ĐIỀU KIỆN</span> bắt buộc khi NC ≥ Nặng</span>
+      <span class="lg"><span class="opt">tùy chọn</span></span>
+    </div>
+
+    <!-- ===================== FLOW 1: NHANH ===================== -->
+    <section class="flow on" id="f-nhanh">
+      <div class="flow-desc">Áp dụng cho <b>NC Nhẹ</b>. Người báo cáo tạo phiếu rồi đóng nhanh trong một bước, không cần duyệt. Nếu phiếu bị nâng lên Nặng/Nghiêm trọng thì khóa đóng nhanh và chuyển sang luồng tương ứng.</div>
+      <div class="steps" data-acc>
+
+        <div class="step done">
+          <span class="dot">1</span>
+          <div class="step-card">
+            <div class="step-head"><span class="st-from">—</span><span class="arrow">›</span><span class="st-to">New</span>
+              <span class="ttl">Tạo phiếu NC</span><span class="ep">POST /nc</span><span class="chev">▾</span></div>
+            <div class="step-body">
+              <p class="exp">Chọn mã lỗi để hệ thống tự phân loại mức nghiêm trọng. Có thể khai nhiều chỉ tiêu — mức lấy theo chỉ tiêu nặng nhất.</p>
+              <table class="ftbl"><thead><tr><th>Trường</th><th>Kiểu</th><th>Yêu cầu</th><th>Ghi chú</th></tr></thead><tbody>
+                <tr><td class="fname">loaiNc</td><td class="ftype">String</td><td><span class="req">BẮT BUỘC</span></td><td>Loại phiếu (ví dụ "NC")</td></tr>
+                <tr><td class="fname">nguonPhatSinh</td><td class="ftype">NcSource</td><td><span class="req">BẮT BUỘC</span></td><td>Nguồn: thủ công / môi trường / nhận hàng…</td></tr>
+                <tr><td class="fname">nhaMay</td><td class="ftype">String</td><td><span class="req">BẮT BUỘC</span></td><td>Mã nhà máy (MGP, DNA…)</td></tr>
+                <tr><td class="fname">nguoiBaoCao</td><td class="ftype">String</td><td><span class="req">BẮT BUỘC</span></td><td>Người lập phiếu</td></tr>
+                <tr><td class="fname">chiTieu[]</td><td class="ftype">List</td><td><span class="req">BẮT BUỘC</span></td><td>≥1 chỉ tiêu, mỗi dòng cần <b>maLoiId</b>; tùy chọn maHang, inOutSpec</td></tr>
+                <tr><td class="fname">loKiem / lenhSx / congDoan / khuVuc</td><td class="ftype">String</td><td><span class="opt">tùy chọn</span></td><td>Thông tin truy vết</td></tr>
+                <tr><td class="fname">moTaLoi / soLuong / nguyenNhanSoBo</td><td class="ftype">String/số</td><td><span class="opt">tùy chọn</span></td><td>Mô tả thêm</td></tr>
+                <tr><td class="fname">doiTuong[]</td><td class="ftype">List</td><td><span class="opt">tùy chọn</span></td><td>Lô/mã hàng ảnh hưởng (loaiDoiTuong + giaTri)</td></tr>
+              </tbody></table>
+              <p class="note">Số hiệu tự sinh dạng <code>KPH-{năm}-{nhà máy}-{5 số}</code>.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="step">
+          <span class="dot">2</span>
+          <div class="step-card">
+            <div class="step-head"><span class="st-from">New</span><span class="arrow">›</span><span class="st-to">Closed</span>
+              <span class="ttl">Đóng nhanh</span><span class="ep">POST /nc/{so}/close-fast</span><span class="chev">▾</span></div>
+            <div class="step-body">
+              <div class="guard"><b>Điều kiện:</b> chỉ cho NC Nhẹ. NC đã nâng lên Nặng/Nghiêm trọng hoặc đã đóng sẽ bị chặn.</div>
+              <table class="ftbl"><thead><tr><th>Trường</th><th>Kiểu</th><th>Yêu cầu</th><th>Ghi chú</th></tr></thead><tbody>
+                <tr><td class="fname">ketQuaXuLy</td><td class="ftype">String</td><td><span class="req">BẮT BUỘC</span></td><td>Mô tả cách xử lý</td></tr>
+                <tr><td class="fname">actor</td><td class="ftype">String</td><td><span class="req">BẮT BUỘC</span></td><td>Người thực hiện</td></tr>
+              </tbody></table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== FLOW 2: XEM XÉT ===================== -->
+    <section class="flow" id="f-xemxet">
+      <div class="flow-desc">Áp dụng cho <b>NC Nặng</b>. Phải đề xuất hướng xử lý (disposition) → duyệt 2 cấp bởi 2 người QA khác nhau (SoD) → xác nhận hoàn thành kèm chi phí thực tế → thẩm tra đóng.</div>
+      <div class="steps" data-acc>
+
+        <div class="step">
+          <span class="dot">1</span>
+          <div class="step-card">
+            <div class="step-head"><span class="st-from">New</span><span class="arrow">›</span><span class="st-to">PendingApproval</span>
+              <span class="ttl">Trình duyệt (đề xuất disposition)</span><span class="ep">POST /nc/{so}/submit-approval</span><span class="chev">▾</span></div>
+            <div class="step-body">
+              <table class="ftbl"><thead><tr><th>Trường</th><th>Kiểu</th><th>Yêu cầu</th><th>Ghi chú</th></tr></thead><tbody>
+                <tr><td class="fname">nguyenNhanSoBo</td><td class="ftype">String</td><td><span class="req">BẮT BUỘC</span></td><td>Nguyên nhân sơ bộ</td></tr>
+                <tr><td class="fname">dispositionDeXuat</td><td class="ftype">String</td><td><span class="req">BẮT BUỘC</span></td><td>REWORK / RETURN_NCC / HA_CAP / TAI_CHE / TIEU_HUY</td></tr>
+                <tr><td class="fname">chiPhiUocTinh</td><td class="ftype">BigDecimal</td><td><span class="req">BẮT BUỘC</span></td><td>Chi phí ước tính</td></tr>
+                <tr><td class="fname">boPhanThucHien</td><td class="ftype">String</td><td><span class="req">BẮT BUỘC</span></td><td>Bộ phận xử lý</td></tr>
+                <tr><td class="fname">actor</td><td class="ftype">String</td><td><span class="req">BẮT BUỘC</span></td><td>Người đề xuất — <b>không được tự duyệt</b> (SoD)</td></tr>
+              </tbody></table>
+            </div>
+          </div>
+        </div>
+
+        <div class="step">
+          <span class="dot">2</span>
+          <div class="step-card">
+            <div class="step-head"><span class="st-from">PendingApproval</span><span class="arrow">›</span><span class="st-to">Processing</span>
+              <span class="ttl">Duyệt (2 cấp, 2 người QA khác nhau)</span><span class="ep">POST /nc/{so}/approve</span><span class="chev">▾</span></div>
+            <div class="step-body">
+              <div class="guard"><b>Quy tắc:</b> người duyệt phải thuộc nhóm <b>QA</b> (xác minh vai trò thật) và cùng nhà máy với NC (hoặc QA tập đoàn). Cấp 2 phải khác người duyệt cấp 1; không ai được tự duyệt phiếu mình đề xuất.</div>
+              <table class="ftbl"><thead><tr><th>Trường</th><th>Kiểu</th><th>Yêu cầu</th><th>Ghi chú</th></tr></thead><tbody>
+                <tr><td class="fname">actor</td><td class="ftype">String</td><td><span class="req">BẮT BUỘC</span></td><td>Người duyệt (gọi 2 lần bởi 2 QA khác nhau)</td></tr>
+              </tbody></table>
+              <p class="note">Nếu từ chối: <code>POST /nc/{so}/reject</code> cần <b>lyDo</b> + <b>actor</b>; phiếu quay lại để sửa, reset duyệt cấp 1.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="step">
+          <span class="dot">3</span>
+          <div class="step-card">
+            <div class="step-head"><span class="st-from">Processing</span><span class="arrow">›</span><span class="st-to">PendingVerification</span>
+              <span class="ttl">Xác nhận hoàn thành</span><span class="ep">POST /nc/{so}/confirm-done</span><span class="chev">▾</span></div>
+            <div class="step-body">
+              <table class="ftbl"><thead><tr><th>Trường</th><th>Kiểu</th><th>Yêu cầu</th><th>Ghi chú</th></tr></thead><tbody>
+                <tr><td class="fname">bangChung</td><td class="ftype">String</td><td><span class="req">BẮT BUỘC</span></td><td>Bằng chứng xử lý</td></tr>
+                <tr><td class="fname">chiPhiThucTe</td><td class="ftype">BigDecimal</td><td><span class="req">BẮT BUỘC</span></td><td>Chi phí thực tế</td></tr>
+                <tr><td class="fname">actor</td><td class="ftype">String</td><td><span class="req">BẮT BUỘC</span></td><td>Người thực hiện</td></tr>
+              </tbody></table>
+            </div>
+          </div>
+        </div>
+
+        <div class="step">
+          <span class="dot">4</span>
+          <div class="step-card">
+            <div class="step-head"><span class="st-from">PendingVerification</span><span class="arrow">›</span><span class="st-to">Closed</span>
+              <span class="ttl">Thẩm tra &amp; đóng</span><span class="ep">POST /nc/{so}/verify-close</span><span class="chev">▾</span></div>
+            <div class="step-body">
+              <table class="ftbl"><thead><tr><th>Trường</th><th>Kiểu</th><th>Yêu cầu</th><th>Ghi chú</th></tr></thead><tbody>
+                <tr><td class="fname">ketLuanThamTra</td><td class="ftype">String</td><td><span class="req">BẮT BUỘC</span></td><td>Kết luận thẩm tra</td></tr>
+                <tr><td class="fname">actor</td><td class="ftype">String</td><td><span class="req">BẮT BUỘC</span></td><td>Người thẩm tra</td></tr>
+              </tbody></table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== FLOW 3: KHOANH VÙNG ===================== -->
+    <section class="flow" id="f-khoanh">
+      <div class="flow-desc">Áp dụng cho <b>NC Nghiêm trọng</b> / an toàn thực phẩm. Bắt buộc khoanh vùng lô trước khi trình; QA tập đoàn duyệt 1 cấp; gỡ khoanh từng lô trong quá trình xử lý; chỉ đóng khi mọi lô đã có trạng thái cuối (guard N9).</div>
+      <div class="steps" data-acc>
+
+        <div class="step">
+          <span class="dot">1</span>
+          <div class="step-card">
+            <div class="step-head"><span class="st-from">New</span><span class="arrow">›</span><span class="st-to">Containment</span>
+              <span class="ttl">Khoanh vùng (Hold lô)</span><span class="ep">POST /nc/{so}/containment</span><span class="chev">▾</span></div>
+            <div class="step-body">
+              <div class="guard"><b>Bắt buộc:</b> ≥1 lô khoanh, mỗi lô phải có chứng từ Hold.</div>
+              <table class="ftbl"><thead><tr><th>Trường</th><th>Kiểu</th><th>Yêu cầu</th><th>Ghi chú</th></tr></thead><tbody>
+                <tr><td class="fname">loKhoanh[]</td><td class="ftype">List</td><td><span class="req">BẮT BUỘC</span></td><td>≥1 dòng, mỗi dòng cần <b>soLo</b> + <b>chungTuHold</b></td></tr>
+                <tr><td class="fname">actor</td><td class="ftype">String</td><td><span class="req">BẮT BUỘC</span></td><td>Người khoanh vùng</td></tr>
+              </tbody></table>
+            </div>
+          </div>
+        </div>
+
+        <div class="step">
+          <span class="dot">2</span>
+          <div class="step-card">
+            <div class="step-head"><span class="st-from">Containment</span><span class="arrow">›</span><span class="st-to">PendingApproval</span>
+              <span class="ttl">Trình duyệt</span><span class="ep">POST /nc/{so}/submit-approval</span><span class="chev">▾</span></div>
+            <div class="step-body">
+              <div class="guard"><b>Chặn:</b> không được bỏ qua bước Containment. Các trường giống bước "Trình duyệt" của luồng Có xem xét.</div>
+              <table class="ftbl"><thead><tr><th>Trường</th><th>Yêu cầu</th></tr></thead><tbody>
+                <tr><td class="fname">nguyenNhanSoBo, dispositionDeXuat, chiPhiUocTinh, boPhanThucHien, actor</td><td><span class="req">BẮT BUỘC</span></td></tr>
+              </tbody></table>
+            </div>
+          </div>
+        </div>
+
+        <div class="step">
+          <span class="dot">3</span>
+          <div class="step-card">
+            <div class="step-head"><span class="st-from">PendingApproval</span><span class="arrow">›</span><span class="st-to">Processing</span>
+              <span class="ttl">QA tập đoàn duyệt (1 cấp)</span><span class="ep">POST /nc/{so}/approve</span><span class="chev">▾</span></div>
+            <div class="step-body">
+              <div class="guard"><b>Quy tắc:</b> NC Nghiêm trọng chỉ <b>QA tập đoàn</b> được duyệt (1 lần). QA nhà máy sẽ bị từ chối (ROLE_DENIED).</div>
+              <table class="ftbl"><thead><tr><th>Trường</th><th>Yêu cầu</th></tr></thead><tbody>
+                <tr><td class="fname">actor</td><td><span class="req">BẮT BUỘC</span> — tài khoản có vai trò QA_TAP_DOAN</td></tr>
+              </tbody></table>
+            </div>
+          </div>
+        </div>
+
+        <div class="step">
+          <span class="dot">4</span>
+          <div class="step-card">
+            <div class="step-head"><span class="st-from">Processing</span><span class="arrow">›</span><span class="st-to">Processing</span>
+              <span class="ttl">Gỡ khoanh từng lô</span><span class="ep">POST /nc/{so}/unhold</span><span class="chev">▾</span></div>
+            <div class="step-body">
+              <table class="ftbl"><thead><tr><th>Trường</th><th>Kiểu</th><th>Yêu cầu</th><th>Ghi chú</th></tr></thead><tbody>
+                <tr><td class="fname">chungTuUnhold</td><td class="ftype">String</td><td><span class="req">BẮT BUỘC</span></td><td>Chứng từ gỡ Hold</td></tr>
+                <tr><td class="fname">trangThaiDongLo</td><td class="ftype">String</td><td><span class="req">BẮT BUỘC</span></td><td>Released / Scrapped / Reworked</td></tr>
+                <tr><td class="fname">actor</td><td class="ftype">String</td><td><span class="req">BẮT BUỘC</span></td><td>Người gỡ khoanh</td></tr>
+              </tbody></table>
+            </div>
+          </div>
+        </div>
+
+        <div class="step">
+          <span class="dot">5</span>
+          <div class="step-card">
+            <div class="step-head"><span class="st-from">…</span><span class="arrow">›</span><span class="st-to">Closed</span>
+              <span class="ttl">confirm-done → verify-close</span><span class="ep">như luồng Nặng</span><span class="chev">▾</span></div>
+            <div class="step-body">
+              <div class="guard"><b>Guard N9:</b> không được đóng khi còn lô đang Held. Mọi lô phải ở trạng thái cuối (Released/Scrapped/Reworked).</div>
+              <p class="exp">Hai bước cuối giống luồng Có xem xét: confirm-done (bangChung + chiPhiThucTe + actor) rồi verify-close (ketLuanThamTra + actor).</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== FLOW 4: CAPA ===================== -->
+    <section class="flow" id="f-capa">
+      <div class="flow-desc">CAPA tạo từ NC để phân tích nguyên nhân gốc và hành động khắc phục/phòng ngừa. Vòng: <b>Open → Investigating → ActionPlan → Processing → Monitoring → Closed/Ineffective</b>. Nhiều trường chỉ bắt buộc khi NC gốc ≥ Nặng.</div>
+      <div class="steps" data-acc>
+
+        <div class="step">
+          <span class="dot">1</span>
+          <div class="step-card">
+            <div class="step-head"><span class="st-from">Open</span><span class="arrow">›</span><span class="st-to">Investigating</span>
+              <span class="ttl">Bắt đầu điều tra</span><span class="ep">POST /capa/{id}/to-investigating</span><span class="chev">▾</span></div>
+            <div class="step-body">
+              <div class="guard"><b>Điều kiện (NC ≥ Nặng):</b> phải có kế hoạch điều tra (ít nhất mục tiêu).</div>
+              <table class="ftbl"><thead><tr><th>Trường</th><th>Kiểu</th><th>Yêu cầu</th><th>Ghi chú</th></tr></thead><tbody>
+                <tr><td class="fname">khMucTieu</td><td class="ftype">String</td><td><span class="cond">ĐIỀU KIỆN</span></td><td>Mục tiêu điều tra</td></tr>
+                <tr><td class="fname">khPhuongPhap</td><td class="ftype">String</td><td><span class="opt">tùy chọn</span></td><td>Phương pháp</td></tr>
+                <tr><td class="fname">khNguonLuc</td><td class="ftype">String</td><td><span class="opt">tùy chọn</span></td><td>Nguồn lực</td></tr>
+                <tr><td class="fname">actor</td><td class="ftype">String</td><td><span class="req">BẮT BUỘC</span></td><td></td></tr>
+              </tbody></table>
+            </div>
+          </div>
+        </div>
+
+        <div class="step">
+          <span class="dot">2</span>
+          <div class="step-card">
+            <div class="step-head"><span class="st-from">Investigating</span><span class="arrow">›</span><span class="st-to">ActionPlan</span>
+              <span class="ttl">Phân tích nguyên nhân gốc (RCA)</span><span class="ep">POST /capa/{id}/to-action-plan</span><span class="chev">▾</span></div>
+            <div class="step-body">
+              <div class="guard"><b>Điều kiện (NC ≥ Nặng):</b> cần RCA (kết luận) + nhóm nguyên nhân (6M hoặc mô tả) + chi phí đầu tư.</div>
+              <table class="ftbl"><thead><tr><th>Trường</th><th>Kiểu</th><th>Yêu cầu</th><th>Ghi chú</th></tr></thead><tbody>
+                <tr><td class="fname">rcaNoiDung</td><td class="ftype">String</td><td><span class="cond">ĐIỀU KIỆN</span></td><td>Kết luận nguyên nhân gốc</td></tr>
+                <tr><td class="fname">rcaMethod</td><td class="ftype">RcaMethod</td><td><span class="opt">tùy chọn</span></td><td>FIVE_WHY / FISHBONE / IS_IS_NOT</td></tr>
+                <tr><td class="fname">nhomNguyenNhan6m</td><td class="ftype">enum 6M</td><td><span class="cond">ĐIỀU KIỆN</span></td><td>Man/Machine/Method/Material/Measurement/Environment</td></tr>
+                <tr><td class="fname">chiPhiDauTu</td><td class="ftype">BigDecimal</td><td><span class="cond">ĐIỀU KIỆN</span></td><td>Chi phí đầu tư CAPA</td></tr>
+                <tr><td class="fname">taiDien</td><td class="ftype">Boolean</td><td><span class="opt">tùy chọn</span></td><td>Cờ tái diễn</td></tr>
+                <tr><td class="fname">rpnS / rpnO / rpnD</td><td class="ftype">1–5</td><td><span class="opt">tùy chọn</span></td><td>Đánh giá rủi ro RPN</td></tr>
+                <tr><td class="fname">actor</td><td class="ftype">String</td><td><span class="req">BẮT BUỘC</span></td><td></td></tr>
+              </tbody></table>
+            </div>
+          </div>
+        </div>
+
+        <div class="step">
+          <span class="dot">3</span>
+          <div class="step-card">
+            <div class="step-head"><span class="st-from">ActionPlan</span><span class="arrow">›</span><span class="st-to">ActionPlan</span>
+              <span class="ttl">Thêm hành động con</span><span class="ep">POST /capa/{id}/actions</span><span class="chev">▾</span></div>
+            <div class="step-body">
+              <table class="ftbl"><thead><tr><th>Trường</th><th>Kiểu</th><th>Yêu cầu</th><th>Ghi chú</th></tr></thead><tbody>
+                <tr><td class="fname">loai</td><td class="ftype">ActionType</td><td><span class="req">BẮT BUỘC</span></td><td>TUC_THOI (khắc phục) / NGAN_TAI_DIEN (ngăn tái diễn)</td></tr>
+                <tr><td class="fname">moTa</td><td class="ftype">String</td><td><span class="req">BẮT BUỘC</span></td><td>Mô tả hành động</td></tr>
+                <tr><td class="fname">nguoiPhuTrach</td><td class="ftype">String</td><td><span class="req">BẮT BUỘC</span></td><td>Người phụ trách</td></tr>
+                <tr><td class="fname">deadline</td><td class="ftype">LocalDate</td><td><span class="req">BẮT BUỘC</span></td><td>Hạn hoàn thành</td></tr>
+                <tr><td class="fname">loaiHanhDong</td><td class="ftype">ActionCategory</td><td><span class="opt">tùy chọn</span></td><td>CORRECTIVE (mặc định) / PREVENTIVE</td></tr>
+                <tr><td class="fname">actor</td><td class="ftype">String</td><td><span class="req">BẮT BUỘC</span></td><td></td></tr>
+              </tbody></table>
+            </div>
+          </div>
+        </div>
+
+        <div class="step">
+          <span class="dot">4</span>
+          <div class="step-card">
+            <div class="step-head"><span class="st-from">ActionPlan</span><span class="arrow">›</span><span class="st-to">Processing</span>
+              <span class="ttl">Chuyển thực thi</span><span class="ep">POST /capa/{id}/to-processing</span><span class="chev">▾</span></div>
+            <div class="step-body">
+              <div class="guard"><b>Điều kiện:</b> ≥1 action. Nếu NC ≥ Nặng cần cả 2 ô: khắc phục tức thời + ngăn tái diễn.</div>
+              <table class="ftbl"><thead><tr><th>Trường</th><th>Kiểu</th><th>Yêu cầu</th><th>Ghi chú</th></tr></thead><tbody>
+                <tr><td class="fname">khacPhucTucThoi</td><td class="ftype">String</td><td><span class="cond">ĐIỀU KIỆN</span></td><td>Bắt buộc khi NC ≥ Nặng</td></tr>
+                <tr><td class="fname">nganTaiDien</td><td class="ftype">String</td><td><span class="cond">ĐIỀU KIỆN</span></td><td>Bắt buộc khi NC ≥ Nặng</td></tr>
+                <tr><td class="fname">actor</td><td class="ftype">String</td><td><span class="req">BẮT BUỘC</span></td><td></td></tr>
+              </tbody></table>
+            </div>
+          </div>
+        </div>
+
+        <div class="step">
+          <span class="dot">5</span>
+          <div class="step-card">
+            <div class="step-head"><span class="st-from">Processing</span><span class="arrow">›</span><span class="st-to">Monitoring</span>
+              <span class="ttl">Chuyển theo dõi (đặt 2 mốc)</span><span class="ep">POST /capa/{id}/to-monitoring</span><span class="chev">▾</span></div>
+            <div class="step-body">
+              <div class="guard"><b>Điều kiện:</b> mọi action đã Completed.</div>
+              <table class="ftbl"><thead><tr><th>Trường</th><th>Kiểu</th><th>Yêu cầu</th><th>Ghi chú</th></tr></thead><tbody>
+                <tr><td class="fname">xNgay</td><td class="ftype">Integer &gt; 0</td><td><span class="req">BẮT BUỘC</span></td><td>Mốc thời gian theo dõi (ngày)</td></tr>
+                <tr><td class="fname">nLo</td><td class="ftype">Integer ≥ 0</td><td><span class="req">BẮT BUỘC</span></td><td>Số lô kiểm chứng (0 = nhóm N=0, cần biên bản)</td></tr>
+                <tr><td class="fname">actor</td><td class="ftype">String</td><td><span class="req">BẮT BUỘC</span></td><td></td></tr>
+              </tbody></table>
+              <p class="note">Tại Monitoring: kiểm chứng 2 mốc (X ngày + N lô). Đủ cả hai → <code>confirm-effective</code> → Closed. Không đạt / quá số lần dời hạn → Ineffective (sinh NC kế thừa, có thể tự mở PR).</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== FLOW 5: PR ===================== -->
+    <section class="flow" id="f-pr">
+      <div class="flow-desc">Yêu cầu thay đổi (Permanent/Process Change Request) — mở khi CAPA không hiệu quả / fail lần 2 / NC trần Nghiêm trọng / tái diễn lần 3 trong 90 ngày. Duyệt theo chuỗi vai trò tùy loại thay đổi.</div>
+      <div class="steps" data-acc>
+        <div class="step">
+          <span class="dot">1</span>
+          <div class="step-card">
+            <div class="step-head"><span class="st-from">—</span><span class="arrow">›</span><span class="st-to">Draft</span>
+              <span class="ttl">Tạo PR</span><span class="ep">POST /pr</span><span class="chev">▾</span></div>
+            <div class="step-body">
+              <table class="ftbl"><thead><tr><th>Trường</th><th>Kiểu</th><th>Yêu cầu</th><th>Ghi chú</th></tr></thead><tbody>
+                <tr><td class="fname">loaiThayDoi</td><td class="ftype">LoaiThayDoi</td><td><span class="req">BẮT BUỘC</span></td><td>QUY_CACH / CONG_THUC / BAO_BI_NHAN / NHA_CUNG_CAP / QUY_TRINH_TB_SOP</td></tr>
+                <tr><td class="fname">maHang / maLoiId / ncSoHieu[]</td><td class="ftype">String/List</td><td><span class="opt">tùy chọn</span></td><td>Liên kết NC gom vào PR</td></tr>
+                <tr><td class="fname">actor</td><td class="ftype">String</td><td><span class="req">BẮT BUỘC</span></td><td></td></tr>
+              </tbody></table>
+            </div>
+          </div>
+        </div>
+        <div class="step">
+          <span class="dot">2</span>
+          <div class="step-card">
+            <div class="step-head"><span class="st-from">PendingApproval</span><span class="arrow">›</span><span class="st-to">Approved</span>
+              <span class="ttl">Duyệt theo chuỗi vai trò</span><span class="ep">POST /pr/{id}/approve</span><span class="chev">▾</span></div>
+            <div class="step-body">
+              <div class="guard"><b>Quy tắc:</b> mỗi cấp cần đúng vai trò trong chuỗi duyệt của loại thay đổi, và người duyệt phải <b>thực sự</b> có vai trò đó (tra app_user_role). Ví dụ CONG_THUC: R_AND_D → QA_TAP_DOAN.</div>
+              <table class="ftbl"><thead><tr><th>Trường</th><th>Kiểu</th><th>Yêu cầu</th><th>Ghi chú</th></tr></thead><tbody>
+                <tr><td class="fname">actor</td><td class="ftype">String</td><td><span class="req">BẮT BUỘC</span></td><td>Người duyệt</td></tr>
+                <tr><td class="fname">vaiTro</td><td class="ftype">String</td><td><span class="req">BẮT BUỘC</span></td><td>Vai trò cần duyệt ở cấp hiện tại</td></tr>
+                <tr><td class="fname">lyDo</td><td class="ftype">String</td><td><span class="cond">khi từ chối</span></td><td>Bắt buộc khi reject</td></tr>
+              </tbody></table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== REF ===================== -->
+    <section class="flow" id="f-ref">
+      <div class="flow-desc">Chú giải nhanh các khái niệm &amp; quy ước dùng trong app.</div>
+      <table class="ftbl" style="background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:var(--sh)">
+        <thead><tr><th>Khái niệm</th><th>Ý nghĩa</th></tr></thead><tbody>
+          <tr><td class="fname">SoD</td><td>Phân tách trách nhiệm: người đề xuất không được tự duyệt; cấp 2 khác cấp 1.</td></tr>
+          <tr><td class="fname">Role thật</td><td>Vai trò được xác minh từ bảng <code>app_user_role</code>, không tin vai trò do client khai.</td></tr>
+          <tr><td class="fname">Scope nhà máy</td><td>QA nhà máy chỉ thấy/duyệt NC của nhà máy mình; QA tập đoàn toàn quyền.</td></tr>
+          <tr><td class="fname">Guard N9</td><td>Không đóng NC khi còn lô đang Held (khoanh vùng chưa xử lý xong).</td></tr>
+          <tr><td class="fname">2 mốc kiểm chứng</td><td>X ngày (thời gian) + N lô (số lô đạt) — đủ cả hai mới xác nhận CAPA hiệu quả.</td></tr>
+          <tr><td class="fname">Tự động mở PR</td><td>CAPA Ineffective / fail lần 2 / trần Nghiêm trọng / tái diễn lần 3 trong 90 ngày.</td></tr>
+          <tr><td class="fname">actor</td><td>Tài khoản thực hiện thao tác (bản demo: chọn qua nút "chuyển tài khoản").</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+  </main>
+</div>
+
+<script>
+// Điều hướng menu trái
+const links = document.querySelectorAll('.side a[data-go]');
+const flows = document.querySelectorAll('.flow');
+const titles = {
+  'f-nhanh':['Luồng Nhanh — NC Nhẹ','Tạo phiếu rồi đóng nhanh trong 2 bước, không cần duyệt.'],
+  'f-xemxet':['Luồng Có xem xét — NC Nặng','Đề xuất → duyệt 2 cấp → xác nhận → thẩm tra đóng.'],
+  'f-khoanh':['Luồng Khoanh vùng — NC Nghiêm trọng','Khoanh lô → QA tập đoàn duyệt → gỡ khoanh → đóng.'],
+  'f-capa':['Vòng đời CAPA','Open → Investigating → ActionPlan → Processing → Monitoring → Closed.'],
+  'f-pr':['Yêu cầu thay đổi (PR)','Mở khi CAPA/NC cần thay đổi lâu dài; duyệt theo chuỗi vai trò.'],
+  'f-ref':['Chú giải & quy ước','Các khái niệm dùng xuyên suốt app.']
+};
+function show(id){
+  links.forEach(a=>a.classList.toggle('on', a.dataset.go===id));
+  flows.forEach(f=>f.classList.toggle('on', f.id===id));
+  const t = titles[id]; if(t){ document.getElementById('pttl').textContent=t[0]; document.getElementById('pdesc').textContent=t[1]; }
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+links.forEach(a=>a.addEventListener('click', e=>{ e.preventDefault(); show(a.dataset.go); }));
+
+// Accordion: bấm vào đầu bước để mở/đóng; mặc định mở bước đầu mỗi flow
+document.querySelectorAll('.step-head').forEach(h=>{
+  h.addEventListener('click', ()=>{
+    const step = h.closest('.step');
+    step.classList.toggle('open');
+  });
+});
+// mở sẵn bước 1 của mỗi flow
+document.querySelectorAll('.flow').forEach(f=>{ const s1=f.querySelector('.step'); if(s1) s1.classList.add('open'); });
+</script>
+</body>
+</html>
