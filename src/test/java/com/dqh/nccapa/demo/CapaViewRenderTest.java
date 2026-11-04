@@ -19,6 +19,7 @@ import com.dqh.nccapa.common.enums.NcSource;
 import com.dqh.nccapa.common.enums.NhomNguyenNhan6M;
 import com.dqh.nccapa.common.enums.RcaMethod;
 import com.dqh.nccapa.common.security.RoleChecker;
+import com.dqh.nccapa.nc.dto.SubmitApprovalRequest;
 import com.dqh.nccapa.nc.dto.TaoNcRequest;
 import com.dqh.nccapa.nc.entity.Nc;
 import com.dqh.nccapa.nc.service.NcService;
@@ -89,6 +90,8 @@ class CapaViewRenderTest extends MySqlTestBase {
         DefectSeed.seedUserRole(jdbc, "qatd", "QA_TAP_DOAN");
 
         DefectSeed.seedUserRole(jdbc, "rd1", "R_AND_D");
+        // QA nhà máy MGP: hàng chờ duyệt lọc theo nhà máy MGP (khớp nhà máy của NC dựng bên dưới).
+        DefectSeed.seedUserRole(jdbc, "qamgp", "QA_NHA_MAY", "MGP");
         capaOpen = taoCapa("LOT-CV-OPEN").getId();
 
         capaMonitoring = capaToMonitoring("LOT-CV-MON", 5, true);
@@ -107,9 +110,14 @@ class CapaViewRenderTest extends MySqlTestBase {
         capaService.markIneffective(ineff, mi);
         capaIneffective = ineff;
 
-        // NC riêng (không CAPA) để phủ nc-list / nc-detail / nc-queue (chỉ còn NEW -> PendingApproval).
+        // NC riêng (không CAPA) để phủ nc-list / nc-detail / nc-queue: đưa New -> PendingApproval
+        // (nc-queue chỉ liệt kê PendingApproval/Containment).
         Nc nc = taoNc("PRC-02", "LOT-CV-NC");
         this.soNc = nc.getSoHieu();
+        SubmitApprovalRequest sub = new SubmitApprovalRequest();
+        sub.nguyenNhanSoBo = "nguyên nhân sơ bộ"; sub.dispositionDeXuat = "REWORK";
+        sub.chiPhiUocTinh = new BigDecimal("1000000"); sub.boPhanThucHien = "SX"; sub.actor = "user01";
+        ncService.submitApproval(soNc, sub);
 
         // PR (loại CONG_THUC: chuỗi duyệt R_AND_D -> QA_TAP_DOAN) để phủ pr-list / pr-detail.
         TaoPrRequest pr = new TaoPrRequest();
@@ -132,7 +140,9 @@ class CapaViewRenderTest extends MySqlTestBase {
         r.loaiNc = "TRONG_SX"; r.nguonPhatSinh = NcSource.THU_CONG;
         r.nhaMay = "MGP"; r.nguoiBaoCao = "user01"; r.loKiem = lo;
         TaoNcRequest.ChiTieuItem ct = new TaoNcRequest.ChiTieuItem();
-        ct.maLoiId = maLoi; ct.maHang = "SP001";
+        // Mã hàng RIÊNG theo lô: tránh TH2 fail sớm (NC mới cùng mã hàng+mã lỗi làm CAPA Monitoring
+        // trước đó thành Ineffective) và tái diễn lần 3 mở PR.
+        ct.maLoiId = maLoi; ct.maHang = "SP-" + lo;
         r.chiTieu = List.of(ct);
         return ncService.taoNc(r);
     }
@@ -142,7 +152,7 @@ class CapaViewRenderTest extends MySqlTestBase {
         r.loaiNc = "TRONG_SX"; r.nguonPhatSinh = NcSource.THU_CONG;
         r.nhaMay = "MGP"; r.nguoiBaoCao = "user01"; r.loKiem = lo;
         TaoNcRequest.ChiTieuItem ct = new TaoNcRequest.ChiTieuItem();
-        ct.maLoiId = "PRC-02"; ct.maHang = "SP001"; // Nặng
+        ct.maLoiId = "PRC-02"; ct.maHang = "SP-" + lo; // Nặng; mã hàng riêng mỗi CAPA (xem taoNc)
         r.chiTieu = List.of(ct);
         Nc nc = ncService.taoNc(r);
         TaoCapaRequest t = new TaoCapaRequest(); t.actor = "qa";
@@ -253,8 +263,10 @@ class CapaViewRenderTest extends MySqlTestBase {
         String body = html("/capa/" + capaMonitoring, "admin");
         assertThat(body).doesNotContain("data-action=\"confirm-effective\"");
         assertThat(body).contains("Không có thao tác khả dụng.");
-        // QA tập đoàn vẫn thấy nút thao tác (giữ nguyên gating cũ).
+        // CAPA đang Monitoring (không bị TH2 fail sớm nhờ mã hàng riêng): QA thấy nút, SX không.
         assertThat(html("/capa/" + capaMonitoring, "qatd")).contains("data-action=\"confirm-effective\"");
+        assertThat(html("/capa/" + capaMonitoring, "qamgp")).contains("data-action=\"confirm-effective\"");
+        assertThat(html("/capa/" + capaMonitoring, "sxmgp")).doesNotContain("data-action=\"confirm-effective\"");
     }
 
     // ---- Phủ thêm các trang khác có dữ liệu thật (mục 3 của yêu cầu) ----
@@ -273,10 +285,14 @@ class CapaViewRenderTest extends MySqlTestBase {
 
     @Test
     void prList_prDetail_moiVaiTroCoQuyen_200() throws Exception {
-        for (String u : List.of("sxmgp", "qamgp", "qatd", "admin")) {
-            assertThat(html("/pr", u)).as("pr-list role=%s", u).contains("PR#" + prId);
+        for (String u : List.of("qamgp", "qatd", "admin")) {
+            // pr-list render số PR trong <span> (giống capa-list).
+            assertThat(html("/pr", u)).as("pr-list role=%s", u).contains("PR#<span>" + prId + "</span>");
             assertThat(html("/pr/" + prId, u)).as("pr-detail role=%s", u).contains("PR#" + prId);
+            assertThat(html("/capa", u)).as("menu PR role=%s", u).contains("href=\"/pr\"");
         }
+        // BO_PHAN_SX không có menu PR (ma trận UI); route /pr chỉ ẩn menu, không phải guard bảo mật.
+        assertThat(html("/capa", "sxmgp")).doesNotContain("href=\"/pr\"").contains("href=\"/capa\"");
     }
 
     @Test
