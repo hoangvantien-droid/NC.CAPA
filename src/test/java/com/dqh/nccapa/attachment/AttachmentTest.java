@@ -101,10 +101,11 @@ class AttachmentTest extends MySqlTestBase {
                 "file", "a.txt", "text/plain", "a".getBytes(StandardCharsets.UTF_8));
         MockMultipartFile f2 = new MockMultipartFile(
                 "file", "b.txt", "text/plain", "bb".getBytes(StandardCharsets.UTF_8));
-        service.luu("ACTION", "10", f1, "sx");
-        service.luu("ACTION", "10", f2, "sx");
+        String id = String.valueOf(actionId);
+        service.luu("ACTION", id, f1, "sx");
+        service.luu("ACTION", id, f2, "sx");
 
-        List<Attachment> ds = service.danhSach("ACTION", "10");
+        List<Attachment> ds = service.danhSach("ACTION", id);
         assertThat(ds).hasSize(2);
         assertThat(ds).extracting(Attachment::getTenFile)
                 .containsExactlyInAnyOrder("a.txt", "b.txt");
