@@ -155,9 +155,13 @@ public class ViewController {
     }
 
     @GetMapping("/nc/{so}")
-    public String chiTiet(@PathVariable("so") String so, Model model) {
+    public String chiTiet(@PathVariable("so") String so, jakarta.servlet.http.HttpSession session, Model model) {
         Nc nc = ncService.layNc(so);
         model.addAttribute("nc", nc);
+        // Form upload: đúng vai trò theo trạng thái NC (ma trận dùng chung với backend) VÀ NC thuộc scope nhà máy.
+        String nhaMayUser = roleChecker.nhaMayCua(currentUser.hienTai(session).username());
+        boolean trongScope = nhaMayUser == null || nhaMayUser.equals(nc.getNhaMay());
+        model.addAttribute("choPhepUploadNc", trongScope && quyenCua(session).duocUploadNc(nc.getTrangThai()));
         model.addAttribute("chiTieu", ncService.chiTieuCua(so));
         model.addAttribute("doiTuong", ncService.doiTuongCua(so));
         model.addAttribute("audit", audit.timTheo("NC", so));

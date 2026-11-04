@@ -60,6 +60,9 @@ class AttachmentHttpTest extends MySqlTestBase {
         Capa capa = AttachmentFixture.taoCapaActionPlan(ncService, capaService, "ATT-HTTP-CAPA");
         CapaAction action = AttachmentFixture.themAction(capaService, capa.getId());
         actionId = String.valueOf(action.getId());
+        // Seed vai trò SAU khi dựng fixture để không đổi hành vi CapaService lúc tạo CAPA/action.
+        DefectSeed.seedUserRole(jdbc, "qa", "QA_NHA_MAY", "MGP");
+        DefectSeed.seedUserRole(jdbc, "sxmgp", "BO_PHAN_SX", "MGP");
     }
 
     @AfterEach
@@ -103,7 +106,7 @@ class AttachmentHttpTest extends MySqlTestBase {
         mockMvc.perform(multipart("/api/v1/attachment")
                         .file(file)
                         .param("doiTuong", "NC")
-                        .param("doiTuongId", soNc))
+                        .param("doiTuongId", soNc).param("actor", "qa"))
                 .andExpect(status().isUnprocessableEntity())
                 .andExpect(jsonPath("$.success").value(false))
                 .andExpect(jsonPath("$.error.code").value("BUSINESS_RULE"))
@@ -115,7 +118,7 @@ class AttachmentHttpTest extends MySqlTestBase {
         mockMvc.perform(multipart("/api/v1/attachment")
                         .file(new MockMultipartFile("file", "a.txt", "text/plain", "a".getBytes(StandardCharsets.UTF_8)))
                         .param("doiTuong", "NC")
-                        .param("doiTuongId", "KPH-KHONG-CO"))
+                        .param("doiTuongId", "KPH-KHONG-CO").param("actor", "qa"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.success").value(false));
         Integer n = jdbc.queryForObject("SELECT COUNT(*) FROM attachment", Integer.class);
@@ -128,7 +131,7 @@ class AttachmentHttpTest extends MySqlTestBase {
         mockMvc.perform(multipart("/api/v1/attachment")
                         .file(new MockMultipartFile("file", "a.txt", "text/plain", "a".getBytes(StandardCharsets.UTF_8)))
                         .param("doiTuong", "NC")
-                        .param("doiTuongId", soNc))
+                        .param("doiTuongId", soNc).param("actor", "qa"))
                 .andExpect(status().isUnprocessableEntity())
                 .andExpect(jsonPath("$.error.code").value("BUSINESS_RULE"));
     }
@@ -141,14 +144,14 @@ class AttachmentHttpTest extends MySqlTestBase {
         MvcResult uploaded = mockMvc.perform(multipart("/api/v1/attachment")
                         .file(file)
                         .param("doiTuong", "NC")
-                        .param("doiTuongId", soNc))
+                        .param("doiTuongId", soNc).param("actor", "qa"))
                 .andExpect(status().isOk())
                 .andReturn();
         Number idNum = com.jayway.jsonpath.JsonPath.read(
                 uploaded.getResponse().getContentAsString(), "$.data.id");
         long id = idNum.longValue();
 
-        mockMvc.perform(get("/api/v1/attachment/{id}/download", id))
+        mockMvc.perform(get("/api/v1/attachment/{id}/download", id).param("actor", "qa"))
                 .andExpect(status().isOk())
                 .andExpect(header().string("Content-Disposition", containsString("attachment")))
                 .andExpect(content().contentTypeCompatibleWith(MediaType.TEXT_PLAIN));
@@ -161,14 +164,14 @@ class AttachmentHttpTest extends MySqlTestBase {
         MockMultipartFile f2 = new MockMultipartFile(
                 "file", "b.txt", "text/plain", "bb".getBytes(StandardCharsets.UTF_8));
         mockMvc.perform(multipart("/api/v1/attachment").file(f1)
-                        .param("doiTuong", "ACTION").param("doiTuongId", actionId))
+                        .param("doiTuong", "ACTION").param("doiTuongId", actionId).param("actor", "sxmgp"))
                 .andExpect(status().isOk());
         mockMvc.perform(multipart("/api/v1/attachment").file(f2)
-                        .param("doiTuong", "ACTION").param("doiTuongId", actionId))
+                        .param("doiTuong", "ACTION").param("doiTuongId", actionId).param("actor", "sxmgp"))
                 .andExpect(status().isOk());
 
         mockMvc.perform(get("/api/v1/attachment")
-                        .param("doiTuong", "ACTION").param("doiTuongId", actionId))
+                        .param("doiTuong", "ACTION").param("doiTuongId", actionId).param("actor", "sxmgp"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data", hasSize(2)));

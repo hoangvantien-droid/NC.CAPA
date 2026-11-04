@@ -171,11 +171,11 @@
       <section class="panel">
         <h2>File đính kèm</h2>
         <div class="body">
-          <form id="att-form" th:if="${nc.trangThai.name() != 'Closed' and nc.trangThai.name() != 'Cancelled'}" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px">
+          <form id="att-form" th:if="${choPhepUploadNc}" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px">
             <input type="file" id="att-file" required/>
             <button class="btn" type="submit" id="att-submit">Tải lên</button>
           </form>
-          <ul id="att-list" th:data-so="${nc.soHieu}" style="list-style:none;margin:0;padding:0">
+          <ul id="att-list" th:data-so="${nc.soHieu}" th:data-actor="${currentUser != null ? currentUser.username() : ''}" style="list-style:none;margin:0;padding:0">
             <li class="muted">Đang tải danh sách…</li>
           </ul>
           <p class="hint">Đính kèm bằng chứng cho phiếu NC (ảnh/biên bản). Tối đa 10MB mỗi file.</p>
@@ -372,12 +372,13 @@
     (function(){
       var listEl = document.getElementById('att-list');
       var soHieu = listEl ? (listEl.getAttribute('data-so') || '') : '';
+      var attActor = listEl ? (listEl.getAttribute('data-actor') || '') : '';
       var formEl = document.getElementById('att-form');
       var fileEl = document.getElementById('att-file');
       if(!listEl) return; // form có thể vắng khi phiếu ở trạng thái cuối (vẫn cần liệt kê file)
 
       function loadList(){
-        var q = '?doiTuong=NC&doiTuongId=' + encodeURIComponent(soHieu);
+        var q = '?doiTuong=NC&doiTuongId=' + encodeURIComponent(soHieu) + '&actor=' + encodeURIComponent(attActor);
         fetch(CTX + 'api/v1/attachment' + q).then(function(r){ return r.json(); }).then(function(res){
           listEl.innerHTML = '';
           var items = (res.success && res.data) ? res.data : [];
@@ -389,7 +390,7 @@
             var li = document.createElement('li');
             li.style.cssText = 'padding:6px 0;border-bottom:1px solid var(--line)';
             var link = document.createElement('a');
-            link.href = CTX + 'api/v1/attachment/' + a.id + '/download';
+            link.href = CTX + 'api/v1/attachment/' + a.id + '/download?actor=' + encodeURIComponent(attActor);
             link.textContent = a.tenFile;
             li.appendChild(link);
             var meta = document.createElement('span');
@@ -407,7 +408,7 @@
         e.preventDefault();
         if(!fileEl.files || fileEl.files.length === 0){ showToast('Chọn file trước.', 'info'); return; }
         // actor LẤY TỪ tài khoản hiện tại (bỏ prompt hỏi người tải).
-        var actor = currentActor;
+        var actor = attActor;
         var attBtn = document.getElementById('att-submit');
         var attLabel = attBtn.textContent;
         attBtn.disabled = true; attBtn.textContent = 'Đang gửi…';

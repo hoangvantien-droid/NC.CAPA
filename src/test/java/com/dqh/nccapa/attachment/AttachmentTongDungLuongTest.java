@@ -56,6 +56,7 @@ class AttachmentTongDungLuongTest extends MySqlTestBase {
 
         DefectSeed.seed(jdbc);
         String so = AttachmentFixture.taoNc(ncService, "ATT-DL").getSoHieu();
+        DefectSeed.seedUserRole(jdbc, "qa", "QA_NHA_MAY", "MGP");
         service.luu("NC", so, f1, "qa"); // 60 <= 100 → OK
         // 60 (đã có) + 60 = 120 > 100 → từ chối
         assertThatThrownBy(() -> service.luu("NC", so, f2, "qa"))

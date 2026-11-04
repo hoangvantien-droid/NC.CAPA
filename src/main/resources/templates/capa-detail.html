@@ -116,7 +116,7 @@
                           style="padding:2px 8px;font-size:12px;margin-left:6px"
                           th:data-complete="${a.id}">Hoàn thành</button></td>
                 <td><button class="btn" style="padding:2px 8px;font-size:12px"
-                            th:if="${capa.trangThai.name() != 'Closed' and capa.trangThai.name() != 'Ineffective'}"
+                            th:if="${capa.trangThai.name() != 'Closed' and capa.trangThai.name() != 'Ineffective' and (quyen.laQa or a.nguoiPhuTrach == currentUser.username())}"
                             th:data-att-action="${a.id}">Đính kèm</button></td>
               </tr>
               <tr th:if="${actions.isEmpty()}"><td colspan="7" class="empty">Chưa có action.</td></tr>
@@ -404,7 +404,7 @@
     document.querySelectorAll('button[data-att-action]').forEach(function(btn){
       btn.addEventListener('click', function(){
         var aid = btn.getAttribute('data-att-action');
-        var q = '?doiTuong=ACTION&doiTuongId=' + encodeURIComponent(aid);
+        var q = '?doiTuong=ACTION&doiTuongId=' + encodeURIComponent(aid) + '&actor=' + encodeURIComponent(currentActor);
         fetch(CTX + 'api/v1/attachment' + q).then(function(r){ return r.json(); }).then(function(res){
           var items = (res.success && res.data) ? res.data : [];
           var ds = items.length

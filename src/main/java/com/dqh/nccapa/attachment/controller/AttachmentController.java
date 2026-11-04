@@ -38,13 +38,15 @@ public class AttachmentController {
     @GetMapping
     public ApiResponse<List<Attachment>> danhSach(
             @RequestParam("doiTuong") String doiTuong,
-            @RequestParam("doiTuongId") String doiTuongId) {
-        return ApiResponse.ok(service.danhSach(doiTuong, doiTuongId));
+            @RequestParam("doiTuongId") String doiTuongId,
+            @RequestParam(value = "actor", required = false) String actor) {
+        return ApiResponse.ok(service.danhSach(doiTuong, doiTuongId, actor));
     }
 
     @GetMapping("/{id}/download")
-    public ResponseEntity<Resource> download(@PathVariable("id") Long id) {
-        AttachmentService.TaiVeResult kq = service.taiVe(id);
+    public ResponseEntity<Resource> download(@PathVariable("id") Long id,
+            @RequestParam(value = "actor", required = false) String actor) {
+        AttachmentService.TaiVeResult kq = service.taiVe(id, actor);
         Attachment att = kq.getAttachment();
         MediaType mediaType = parseContentType(att.getContentType());
         String tenFile = URLEncoder.encode(att.getTenFile(), StandardCharsets.UTF_8).replace("+", "%20");

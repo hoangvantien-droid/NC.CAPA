@@ -53,6 +53,9 @@ class AttachmentTest extends MySqlTestBase {
         Capa capa = AttachmentFixture.taoCapaActionPlan(ncService, capaService, "ATT-CAPA");
         CapaAction action = AttachmentFixture.themAction(capaService, capa.getId());
         actionId = action.getId();
+        // Seed vai trò SAU khi dựng fixture để không đổi hành vi CapaService lúc tạo CAPA/action.
+        DefectSeed.seedUserRole(jdbc, "qa", "QA_NHA_MAY", "MGP");
+        DefectSeed.seedUserRole(jdbc, "sxmgp", "BO_PHAN_SX", "MGP");
     }
 
     private long soFileTrenDia() throws Exception {
@@ -102,14 +105,14 @@ class AttachmentTest extends MySqlTestBase {
         MockMultipartFile f2 = new MockMultipartFile(
                 "file", "b.txt", "text/plain", "bb".getBytes(StandardCharsets.UTF_8));
         String id = String.valueOf(actionId);
-        service.luu("ACTION", id, f1, "sx");
-        service.luu("ACTION", id, f2, "sx");
+        service.luu("ACTION", id, f1, "sxmgp");
+        service.luu("ACTION", id, f2, "sxmgp");
 
-        List<Attachment> ds = service.danhSach("ACTION", id);
+        List<Attachment> ds = service.danhSach("ACTION", id, "qa");
         assertThat(ds).hasSize(2);
         assertThat(ds).extracting(Attachment::getTenFile)
                 .containsExactlyInAnyOrder("a.txt", "b.txt");
-        assertThat(service.danhSach("ACTION", "999999")).isEmpty();
+        assertThat(service.danhSach("ACTION", "999999", "qa")).isEmpty();
     }
 
     @Test
@@ -118,7 +121,7 @@ class AttachmentTest extends MySqlTestBase {
         MockMultipartFile file = new MockMultipartFile("file", "x.txt", "text/plain", data);
         Attachment att = service.luu("NC", soNc, file, "qa");
 
-        AttachmentService.TaiVeResult kq = service.taiVe(att.getId());
+        AttachmentService.TaiVeResult kq = service.taiVe(att.getId(), "qa");
         Resource res = kq.getResource();
         assertThat(res.exists()).isTrue();
         try (InputStream in = res.getInputStream()) {
@@ -174,7 +177,7 @@ class AttachmentTest extends MySqlTestBase {
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("Không tìm thấy NC");
         assertThat(soFileTrenDia()).isZero();
-        assertThat(service.danhSach("NC", "KPH-KHONG-CO")).isEmpty();
+        assertThat(service.danhSach("NC", "KPH-KHONG-CO", "qa")).isEmpty();
         assertThat(auditService.timTheo("NC", "KPH-KHONG-CO")).isEmpty();
     }
 
@@ -198,7 +201,7 @@ class AttachmentTest extends MySqlTestBase {
                     .hasMessageContaining("Phiếu đã đóng/huỷ");
         }
         assertThat(soFileTrenDia()).isZero();
-        assertThat(service.danhSach("NC", soNc)).isEmpty();
+        assertThat(service.danhSach("NC", soNc, "qa")).isEmpty();
     }
 
     @Test
@@ -211,7 +214,7 @@ class AttachmentTest extends MySqlTestBase {
                     .isInstanceOf(BusinessException.class);
         }
         assertThat(soFileTrenDia()).isZero();
-        assertThat(service.danhSach("ACTION", String.valueOf(actionId))).isEmpty();
+        assertThat(service.danhSach("ACTION", String.valueOf(actionId), "qa")).isEmpty();
     }
 
     @Test
@@ -226,7 +229,7 @@ class AttachmentTest extends MySqlTestBase {
 
     @Test
     void upload_actionCuaCapaDangMo_thanhCong_vaAuditTrenCapa() {
-        service.luu("ACTION", String.valueOf(actionId), txt(), "sx");
+        service.luu("ACTION", String.valueOf(actionId), txt(), "sxmgp");
         List<AuditLog> logs = auditService.timTheo("CAPA", String.valueOf(capaIdCuaAction())).stream()
                 .filter(a -> "UPLOAD_ATTACHMENT".equals(a.getHanhDong())).toList();
         assertThat(logs).hasSize(1);

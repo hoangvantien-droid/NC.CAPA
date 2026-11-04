@@ -7,7 +7,10 @@ import com.dqh.nccapa.capa.repository.CapaActionRepository;
 import com.dqh.nccapa.capa.repository.CapaRepository;
 import com.dqh.nccapa.common.audit.AuditService;
 import com.dqh.nccapa.common.enums.CapaStatus;
+import com.dqh.nccapa.capa.repository.NcCapaLinkDao;
 import com.dqh.nccapa.common.error.BusinessException;
+import com.dqh.nccapa.common.error.ErrorCode;
+import com.dqh.nccapa.common.security.RoleChecker;
 import com.dqh.nccapa.nc.entity.Nc;
 import com.dqh.nccapa.nc.repository.NcRepository;
 import com.dqh.nccapa.config.AppProperties;
@@ -71,9 +74,14 @@ public class AttachmentService {
     private final CapaActionRepository actionRepo;
     private final CapaRepository capaRepo;
     private final AuditService audit;
+    private final RoleChecker roleChecker;
+    private final NcCapaLinkDao ncCapaLink;
 
     public AttachmentService(AttachmentRepository repo, AppProperties appProps, NcRepository ncRepo,
-                             CapaActionRepository actionRepo, CapaRepository capaRepo, AuditService audit) {
+                             CapaActionRepository actionRepo, CapaRepository capaRepo, AuditService audit,
+                             RoleChecker roleChecker, NcCapaLinkDao ncCapaLink) {
+        this.roleChecker = roleChecker;
+        this.ncCapaLink = ncCapaLink;
         this.repo = repo;
         this.appProps = appProps;
         this.ncRepo = ncRepo;
@@ -86,13 +94,21 @@ public class AttachmentService {
      * Kiểm đối tượng đính kèm tồn tại và chưa ở trạng thái cuối. Chạy TRƯỚC khi ghi file ra đĩa.
      * @return cặp (loại audit, id audit) để ghi vết sau khi lưu thành công.
      */
-    private String[] kiemDoiTuong(String doiTuong, String doiTuongId) {
+    private String[] kiemDoiTuong(String doiTuong, String doiTuongId, String actor) {
         if ("NC".equals(doiTuong)) {
             Nc nc = ncRepo.findById(doiTuongId)
                     .orElseThrow(() -> BusinessException.notFound("Không tìm thấy NC: " + doiTuongId));
             if (nc.getTrangThai().laKetThuc()) {
                 throw BusinessException.businessRule("Phiếu đã đóng/huỷ, không đính kèm thêm", "doiTuongId");
             }
+            // Vai trò THẬT (app_user_role) theo ma trận trạng thái dùng chung với UI (AttachmentQuyen).
+            boolean duoc = AttachmentQuyen.vaiTroUploadNc(nc.getTrangThai()).stream()
+                    .anyMatch(r -> roleChecker.coRole(actor, r));
+            if (!duoc) {
+                throw new BusinessException(ErrorCode.ROLE_DENIED,
+                        "Vai trò hiện tại không được đính kèm file khi phiếu ở trạng thái " + nc.getTrangThai());
+            }
+            kiemScopeNhaMay(actor, nc.getNhaMay());
             return new String[] {"NC", doiTuongId};
         }
         long actionId;
@@ -108,7 +124,61 @@ public class AttachmentService {
                 throw BusinessException.businessRule("CAPA đã đóng/không hiệu quả, không đính kèm thêm", "doiTuongId");
             }
         });
+        // Action: QA (nhà máy/tập đoàn) HOẶC chính người phụ trách action đó.
+        boolean laPhuTrach = action.getNguoiPhuTrach() != null && action.getNguoiPhuTrach().equals(actor);
+        if (!roleChecker.laQa(actor) && !laPhuTrach) {
+            throw new BusinessException(ErrorCode.ROLE_DENIED,
+                    "Chỉ QA hoặc người phụ trách action được đính kèm file");
+        }
+        kiemScopeAction(actor, action.getCapaId());
         return new String[] {"CAPA", String.valueOf(action.getCapaId())};
+    }
+
+    /** Actor bắt buộc có (app chưa có xác thực thật nên actor do client gửi, như các guard khác). */
+    private static void yeuCauActor(String actor) {
+        if (actor == null || actor.isBlank()) {
+            throw new BusinessException(ErrorCode.ROLE_DENIED, "Thiếu actor");
+        }
+    }
+
+    /**
+     * Scope nhà máy: actor gắn nhà máy cụ thể chỉ thao tác với đối tượng cùng nhà máy; actor toàn tập đoàn
+     * (nha_may NULL) hoặc ADMIN không bị giới hạn. Vi phạm → ROLE_DENIED (cùng cách NcService.approve).
+     */
+    private void kiemScopeNhaMay(String actor, String nhaMayNc) {
+        String nhaMayActor = roleChecker.nhaMayCua(actor);
+        if (nhaMayActor != null && !nhaMayActor.equals(nhaMayNc) && !roleChecker.coRole(actor, "ADMIN")) {
+            throw new BusinessException(ErrorCode.ROLE_DENIED, "Ngoài phạm vi nhà máy");
+        }
+    }
+
+    /**
+     * Scope cho action: nhà máy của NC gốc liên kết với CAPA cha (nc_capa). Actor có nhà máy cụ thể cần
+     * ít nhất một NC gốc cùng nhà máy; CAPA không có NC gốc thì không xác định được nhà máy → chặn (fail-closed).
+     */
+    private void kiemScopeAction(String actor, Long capaId) {
+        String nhaMayActor = roleChecker.nhaMayCua(actor);
+        if (nhaMayActor == null || roleChecker.coRole(actor, "ADMIN")) return;
+        boolean trung = ncCapaLink.ncSoHieuOfCapa(capaId).stream()
+                .map(ncRepo::findById)
+                .anyMatch(o -> o.isPresent() && nhaMayActor.equals(o.get().getNhaMay()));
+        if (!trung) {
+            throw new BusinessException(ErrorCode.ROLE_DENIED, "Ngoài phạm vi nhà máy");
+        }
+    }
+
+    /** Scope đọc cho (doiTuong, id); đối tượng không tồn tại thì không có gì để chặn. */
+    private void kiemScopeDoc(String actor, String doiTuong, String doiTuongId) {
+        if ("NC".equals(doiTuong)) {
+            ncRepo.findById(doiTuongId).ifPresent(nc -> kiemScopeNhaMay(actor, nc.getNhaMay()));
+        } else if ("ACTION".equals(doiTuong) && doiTuongId != null) {
+            try {
+                actionRepo.findById(Long.parseLong(doiTuongId.trim()))
+                        .ifPresent(a -> kiemScopeAction(actor, a.getCapaId()));
+            } catch (NumberFormatException ignore) {
+                // id không hợp lệ ⇒ không có đối tượng
+            }
+        }
     }
 
     private Path baseDir() {
@@ -127,6 +197,7 @@ public class AttachmentService {
     /** Lưu file: validate, sinh tên duy nhất, ghi ra disk, lưu metadata. */
     @Transactional
     public Attachment luu(String doiTuong, String doiTuongId, MultipartFile file, String nguoiTai) {
+        yeuCauActor(nguoiTai);
         if (doiTuong == null || !DOI_TUONG_HOP_LE.contains(doiTuong)) {
             throw BusinessException.businessRule("doiTuong phải là NC hoặc ACTION", "doiTuong");
         }
@@ -138,7 +209,7 @@ public class AttachmentService {
         }
 
         // Tồn tại + trạng thái: kiểm trước khi đọc/ghi file để không sinh file mồ côi.
-        String[] dauVet = kiemDoiTuong(doiTuong, doiTuongId);
+        String[] dauVet = kiemDoiTuong(doiTuong, doiTuongId, nguoiTai);
 
         // Đọc toàn bộ byte 1 lần: cần header để sniff magic + nội dung để ghi disk.
         byte[] data;
@@ -280,15 +351,19 @@ public class AttachmentService {
     }
 
     @Transactional(readOnly = true)
-    public List<Attachment> danhSach(String doiTuong, String doiTuongId) {
+    public List<Attachment> danhSach(String doiTuong, String doiTuongId, String actor) {
+        yeuCauActor(actor);
+        kiemScopeDoc(actor, doiTuong, doiTuongId);
         return repo.findByDoiTuongAndDoiTuongId(doiTuong, doiTuongId);
     }
 
     /** Lấy metadata + Resource để controller set header và trả nội dung. */
     @Transactional(readOnly = true)
-    public TaiVeResult taiVe(Long id) {
+    public TaiVeResult taiVe(Long id, String actor) {
+        yeuCauActor(actor);
         Attachment att = repo.findById(id)
                 .orElseThrow(() -> BusinessException.notFound("Không tìm thấy đính kèm: " + id));
+        kiemScopeDoc(actor, att.getDoiTuong(), att.getDoiTuongId());
         Path p = baseDir().resolve(att.getTenLuu());
         if (!Files.exists(p)) {
             throw BusinessException.notFound("File không tồn tại trên disk: " + att.getTenLuu());

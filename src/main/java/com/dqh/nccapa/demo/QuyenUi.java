@@ -48,6 +48,18 @@ public record QuyenUi(boolean laNguoiBaoCao, boolean laSx, boolean laQaNhaMay,
         return laQaTapDoan || laAdmin;
     }
 
+    /**
+     * Vai trò hiện tại có được upload file vào NC ở trạng thái {@code tt} không — cùng bảng ma trận
+     * với backend ({@link com.dqh.nccapa.attachment.service.AttachmentQuyen}). Admin luôn false.
+     */
+    public boolean duocUploadNc(com.dqh.nccapa.common.enums.NcStatus tt) {
+        var ds = com.dqh.nccapa.attachment.service.AttachmentQuyen.vaiTroUploadNc(tt);
+        return (laNguoiBaoCao && ds.contains(com.dqh.nccapa.attachment.service.AttachmentQuyen.NGUOI_BAO_CAO))
+                || (laSx && ds.contains(com.dqh.nccapa.attachment.service.AttachmentQuyen.BO_PHAN_SX))
+                || (laQaNhaMay && ds.contains(com.dqh.nccapa.attachment.service.AttachmentQuyen.QA_NHA_MAY))
+                || (laQaTapDoan && ds.contains(com.dqh.nccapa.attachment.service.AttachmentQuyen.QA_TAP_DOAN));
+    }
+
     /** Map 1-1 từ {@link DemoRole} sang bộ cờ quyền UI. */
     public static QuyenUi tu(DemoRole vaiTro) {
         return new QuyenUi(
