@@ -157,6 +157,7 @@ public class Nc {
     public boolean isFoodSafety() { return isFoodSafety; }
     public String getNhaMay() { return nhaMay; }
     public String getLoKiem() { return loKiem; }
+    public BigDecimal getChiPhiUocTinh() { return chiPhiUocTinh; }
     public BigDecimal getChiPhiThucTe() { return chiPhiThucTe; }
     public boolean isDaDuyetCap1() { return daDuyetCap1; }
     public String getNguoiDuyetCap1() { return nguoiDuyetCap1; }
