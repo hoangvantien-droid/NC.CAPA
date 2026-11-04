@@ -113,7 +113,7 @@ class CapaViewRenderTest extends MySqlTestBase {
 
         // PR (loại CONG_THUC: chuỗi duyệt R_AND_D -> QA_TAP_DOAN) để phủ pr-list / pr-detail.
         TaoPrRequest pr = new TaoPrRequest();
-        pr.loaiThayDoi = LoaiThayDoi.CONG_THUC; pr.maHang = "SP001"; pr.maLoiId = "PRC-02"; pr.actor = "qa";
+        pr.loaiThayDoi = LoaiThayDoi.CONG_THUC; pr.maHang = "SP-PR-CV"; pr.maLoiId = "FG-01"; pr.actor = "qa"; // cặp riêng: tránh PR tự mở của PRC-02/SP001
         Pr created = prService.tao(pr);
         PrActionRequest act = new PrActionRequest(); act.actor = "qa";
         prService.toAnalyzing(created.getId(), act);
