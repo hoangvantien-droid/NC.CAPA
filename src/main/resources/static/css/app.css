@@ -46,12 +46,18 @@ a:hover{text-decoration:underline}
 
 /* Thanh trên — header gradient navy (phong cách .hdr của QA Control Tower) */
 .topbar{
-  display:flex;align-items:center;gap:16px;
+  display:flex;align-items:center;gap:16px;flex-wrap:wrap;row-gap:8px;
   padding:14px 24px;
   background:linear-gradient(118deg,#153c6e 0%,#2b5c9e 62%,#356bb0 100%);
   color:#fff;border-bottom:none;
   box-shadow:0 2px 14px rgba(15,23,42,.22);
 }
+/* Responsive không phụ thuộc breakpoint: topbar tự xuống dòng khi thiếu chỗ
+   (hết vùng hở 768–1023px của media query cũ). */
+.topbar .brand{flex:0 0 auto}
+.topbar form{flex:1 1 auto;min-width:0}
+.topbar select{width:100%;max-width:280px;min-height:44px}
+.topbar .quyen-badge{min-width:0;max-width:100%;overflow:hidden;text-overflow:ellipsis}
 .brand{font-weight:800;letter-spacing:-.2px;color:#fff}
 .brand .sep{color:rgba(255,255,255,.5);margin:0 8px}
 .topbar .spacer{flex:1}
@@ -247,6 +253,11 @@ dl.kv dd{margin:0}
 }
 @media (max-width:720px){
   .quyen-badge{flex:1 1 100%;justify-content:center;margin-top:4px}
+}
+/* 360px (iPhone SE): badge quá dài gây tràn 4px → ẩn, chỉ giữ select tài khoản */
+@media (max-width:380px){
+  .quyen-badge{display:none}
+  .topbar{padding:12px 16px}
 }
 
 /* ===== Modal form dùng chung (thao tác NC/CAPA/PR) ===== */
