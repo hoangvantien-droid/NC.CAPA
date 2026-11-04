@@ -140,6 +140,7 @@ public class CapaService {
                     "NC Nặng trở lên: kế hoạch điều tra bắt buộc (ít nhất mục tiêu)", "khMucTieu");
         }
         capa.setKeHoachDieuTra(req.keHoachDieuTra);
+        if (!isBlank(req.nguoiDieuTra)) capa.setNguoiDieuTra(req.nguoiDieuTra);
         capa.setKhMucTieu(req.khMucTieu);
         capa.setKhPhuongPhap(req.khPhuongPhap);
         capa.setKhNguonLuc(req.khNguonLuc);
@@ -166,7 +167,12 @@ public class CapaService {
         capa.setNhomNguyenNhan(req.nhomNguyenNhan);
         capa.setNhomNguyenNhan6m(req.nhomNguyenNhan6m);
         if (req.taiDien != null) capa.setTaiDien(req.taiDien);
+        if (req.coYeuCauPhapLy != null) capa.setCoYeuCauPhapLy(req.coYeuCauPhapLy);
         capa.setChiPhiDauTu(req.chiPhiDauTu);
+        int soRpn = (req.rpnS != null ? 1 : 0) + (req.rpnO != null ? 1 : 0) + (req.rpnD != null ? 1 : 0);
+        if (soRpn != 0 && soRpn != 3) {
+            throw BusinessException.businessRule("RPN cần nhập đủ cả S, O, D (hoặc để trống cả ba)", "rpn");
+        }
         if (req.rpnS != null && req.rpnO != null && req.rpnD != null) {
             validateRpn(req.rpnS); validateRpn(req.rpnO); validateRpn(req.rpnD);
             capa.setRpn(req.rpnS, req.rpnO, req.rpnD);
@@ -232,8 +238,14 @@ public class CapaService {
     /** Yêu cầu gia hạn action (PENDING, chờ duyệt). */
     @Transactional
     public CapaActionExtension yeuCauGiaHan(Long actionId, ExtensionRequest req) {
-        actionRepo.findById(actionId)
+        CapaAction act = actionRepo.findById(actionId)
                 .orElseThrow(() -> BusinessException.notFound("Không tìm thấy action: " + actionId));
+        if (act.getTrangThai() == ActionStatus.Completed) {
+            throw BusinessException.guard("Action đã hoàn thành, không cần gia hạn");
+        }
+        if (!req.deadlineMoi.isAfter(act.getDeadline())) {
+            throw BusinessException.businessRule("Hạn mới phải sau hạn hiện tại (" + act.getDeadline() + ")", "deadlineMoi");
+        }
         CapaActionExtension ext = extRepo.save(
                 new CapaActionExtension(actionId, req.deadlineMoi, req.lyDo, req.actor));
         audit.log("ACTION", String.valueOf(actionId), "YEU_CAU_GIA_HAN", null,
@@ -501,6 +513,13 @@ public class CapaService {
     public Capa layCapa(Long id) {
         return capaRepo.findById(id)
                 .orElseThrow(() -> BusinessException.notFound("Không tìm thấy CAPA: " + id));
+    }
+
+    /** Các yêu cầu gia hạn của các action thuộc CAPA (để hiện/duyệt trên giao diện). */
+    @Transactional(readOnly = true)
+    public List<CapaActionExtension> giaHanCua(Long capaId) {
+        List<Long> ids = actionRepo.findByCapaId(capaId).stream().map(CapaAction::getId).toList();
+        return ids.isEmpty() ? List.of() : extRepo.findByActionIdInOrderByIdAsc(ids);
     }
 
     @Transactional(readOnly = true)

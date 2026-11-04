@@ -149,4 +149,20 @@ class NcContainmentFlowTest extends MySqlTestBase {
         Nc closed = ncService.verifyClose(so, v);
         assertThat(closed.getTrangThai()).isEqualTo(NcStatus.Closed);
     }
-}
+
+    @Test // gỡ khoanh lưu chứng từ Unhold + trạng thái cuối, dòng lô hết khoanh vùng (hiển thị ở nc-detail)
+    void unholdDongLo_luuChungTuVaTrangThaiCuoi() {
+        Nc nc = taoNcNghiemTrong("LOT-C7");
+        String so = nc.getSoHieu();
+        containment(so, "LOT-C7", "HOLD-007");
+        submitApprove(so);
+        NcDoiTuong dt = ncService.doiTuongCua(so).get(0);
+        assertThat(dt.getChungTuHold()).isEqualTo("HOLD-007");
+        UnholdRequest u = new UnholdRequest();
+        u.chungTuUnhold = "UNHOLD-007"; u.trangThaiDongLo = "Released"; u.actor = "qatd";
+        ncService.unholdDongLo(so, dt.getId(), u);
+        NcDoiTuong sau = ncService.doiTuongCua(so).get(0);
+        assertThat(sau.getChungTuUnhold()).isEqualTo("UNHOLD-007");
+        assertThat(sau.getTrangThaiDongLo()).isEqualTo("Released");
+        assertThat(sau.isKhoanhVung()).isFalse();
+    }}

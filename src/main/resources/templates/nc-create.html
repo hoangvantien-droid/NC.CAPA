@@ -32,29 +32,58 @@
     </div>
     <div class="field">
       <label for="nhaMay">Nhà máy</label>
-      <input id="nhaMay" value="MGP"/>
+      <input id="nhaMay" th:value="${nhaMayUser} ?: 'MGP'" value="MGP"/>
     </div>
     <div class="field">
       <label for="nguoiBaoCao">Người báo cáo</label>
-      <input id="nguoiBaoCao" value="qademo"/>
+      <input id="nguoiBaoCao" th:value="${currentUser != null} ? ${currentUser.username()} : 'qademo'" value="qademo"/>
+    </div>
+    <div class="field">
+      <label for="ngaySx">Ngày sản xuất</label>
+      <input id="ngaySx" type="date"/>
+    </div>
+    <div class="field">
+      <label for="khuVuc">Khu vực</label>
+      <input id="khuVuc" placeholder="VD: Line 2 / Kho thành phẩm"/>
+    </div>
+    <div class="field">
+      <label for="lenhSx">Lệnh sản xuất</label>
+      <input id="lenhSx" placeholder="VD: LSX-2026-0123"/>
+    </div>
+    <div class="field">
+      <label for="congDoan">Công đoạn</label>
+      <input id="congDoan" placeholder="VD: Đóng gói"/>
+      <p class="hint">Lệnh SX + công đoạn giúp hệ thống gộp NC cùng nguồn (auto-aggregation).</p>
     </div>
     <div class="field">
       <label for="loKiem">Lô kiểm</label>
       <input id="loKiem" placeholder="LOT-2026-00001"/>
     </div>
     <div class="field">
-      <label for="maLoiId">Mã lỗi (chỉ tiêu vi phạm)</label>
-      <input id="maLoiId" placeholder="FG-03"/>
+      <label for="soLuong">Số lượng ảnh hưởng</label>
+      <input id="soLuong" type="number" min="0" step="any"/>
+    </div>
+
+    <div class="field">
+      <label>Chỉ tiêu vi phạm (mã lỗi + mã hàng)</label>
+      <div id="chiTieuRows"></div>
+      <button type="button" class="btn" id="addChiTieu" style="margin-top:6px">+ Thêm chỉ tiêu</button>
       <p class="hint">Mức nghiêm trọng và luồng xử lý được hệ thống xác định tự động theo bộ mã lỗi.
          Ví dụ (dữ liệu demo): FG-01 Nhẹ · PRC-02 Nặng · FG-03 Nghiêm trọng (khoanh vùng).</p>
     </div>
-    <div class="field">
-      <label for="maHang">Mã hàng</label>
-      <input id="maHang" value="SP001"/>
-    </div>
+
     <div class="field">
       <label for="moTaLoi">Mô tả lỗi</label>
       <textarea id="moTaLoi" placeholder="Mô tả ngắn hiện tượng không phù hợp"></textarea>
+    </div>
+    <div class="field">
+      <label for="nguyenNhanSoBo">Nguyên nhân sơ bộ (tại chỗ)</label>
+      <textarea id="nguyenNhanSoBo" placeholder="Nhận định ban đầu; QA có thể cập nhật lại sau khi điều tra"></textarea>
+    </div>
+    <div class="field">
+      <label for="anhBangChung">Ảnh / file bằng chứng</label>
+      <input id="anhBangChung" type="file" multiple/>
+      <p class="hint">Tối đa 10MB mỗi file. File được tải lên ngay sau khi tạo phiếu.</p>
     </div>
     <button type="submit" class="btn btn-primary" id="create-submit">Tạo phiếu NC</button>
     <p class="hint" id="err" style="color:var(--hold);display:none"></p>
@@ -70,31 +99,99 @@
     window.CTX = (/*[[@{/}]]*/ '/').split(';')[0];
   </script>
   <script th:inline="none">
+    // ---- Chỉ tiêu vi phạm: nhiều dòng (mã lỗi + mã hàng) ----
+    var ctBox = document.getElementById('chiTieuRows');
+    function addChiTieuRow(maLoi, maHang){
+      var row = document.createElement('div');
+      row.className = 'ct-row';
+      row.style.cssText = 'display:flex;gap:8px;margin-bottom:6px;align-items:center';
+      row.innerHTML = '<input class="ct-maloi" placeholder="Mã lỗi, vd FG-03" style="flex:1"/>'
+        + '<input class="ct-mahang" placeholder="Mã hàng, vd SP001" style="flex:1"/>'
+        + '<button type="button" class="btn ct-del" aria-label="Xoá dòng">×</button>';
+      row.querySelector('.ct-maloi').value = maLoi || '';
+      row.querySelector('.ct-mahang').value = maHang || '';
+      row.querySelector('.ct-del').addEventListener('click', function(){
+        if(ctBox.children.length > 1) ctBox.removeChild(row);
+      });
+      ctBox.appendChild(row);
+    }
+    addChiTieuRow('', 'SP001');
+    document.getElementById('addChiTieu').addEventListener('click', function(){ addChiTieuRow('', ''); });
+
+    function showErr(msg){
+      var el = document.getElementById('err');
+      el.style.display = 'block'; el.textContent = msg;
+    }
+
     document.getElementById('f').addEventListener('submit', function(e){
       e.preventDefault();
-      var g = function(id){ return document.getElementById(id).value; };
+      var g = function(id){ return document.getElementById(id).value.trim(); };
+      var chiTieu = [];
+      ctBox.querySelectorAll('.ct-row').forEach(function(r){
+        var ml = r.querySelector('.ct-maloi').value.trim();
+        if(ml) chiTieu.push({ maLoiId: ml, maHang: r.querySelector('.ct-mahang').value.trim() || null });
+      });
+      if(chiTieu.length === 0){ showErr('Nhập ít nhất một mã lỗi.'); return; }
       var body = {
         loaiNc: g('loaiNc'), nguonPhatSinh: 'THU_CONG',
         nhaMay: g('nhaMay'), nguoiBaoCao: g('nguoiBaoCao'),
-        loKiem: g('loKiem') || null, moTaLoi: g('moTaLoi') || null,
-        chiTieu: [ { maLoiId: g('maLoiId'), maHang: g('maHang') || null } ]
+        ngaySx: g('ngaySx') || null, khuVuc: g('khuVuc') || null,
+        lenhSx: g('lenhSx') || null, congDoan: g('congDoan') || null,
+        loKiem: g('loKiem') || null,
+        soLuong: g('soLuong') === '' ? null : Number(g('soLuong')),
+        moTaLoi: g('moTaLoi') || null,
+        nguyenNhanSoBo: g('nguyenNhanSoBo') || null,
+        chiTieu: chiTieu
       };
       var sbtn = document.getElementById('create-submit');
       if(sbtn.disabled) return; // chống double-submit
       var sLabel = sbtn.textContent;
       sbtn.disabled = true; sbtn.textContent = 'Đang gửi…';
+      var files = document.getElementById('anhBangChung').files;
+      document.getElementById('err').style.display = 'none';
+
+      // Tải lần lượt từng file đính kèm cho phiếu vừa tạo; trả về mảng tên file lỗi.
+      function uploadAll(soHieu){
+        var failed = [];
+        var chain = Promise.resolve();
+        Array.prototype.forEach.call(files, function(f){
+          chain = chain.then(function(){
+            var fd = new FormData();
+            fd.append('doiTuong', 'NC'); fd.append('doiTuongId', soHieu);
+            fd.append('file', f); fd.append('actor', body.nguoiBaoCao);
+            return fetch(CTX + 'api/v1/attachment', { method:'POST', body: fd })
+              .then(function(r){ return r.json(); })
+              .then(function(r){ if(!r.success) failed.push(f.name); })
+              .catch(function(){ failed.push(f.name); });
+          });
+        });
+        return chain.then(function(){ return failed; });
+      }
+
       fetch(CTX + 'api/v1/nc', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) })
         .then(function(r){ return r.json(); })
         .then(function(res){
-          if(res.success){ location.href = CTX + 'nc/' + encodeURIComponent(res.data.soHieu); }
-          else {
-            var el = document.getElementById('err');
-            el.style.display='block';
-            el.textContent = 'Không tạo được: ' + (res.error ? res.error.message : 'lỗi');
+          if(!res.success){
+            showErr('Không tạo được: ' + (res.error ? res.error.message : 'lỗi'));
+            sbtn.disabled = false; sbtn.textContent = sLabel;
+            return;
           }
+          var so = res.data.soHieu;
+          var url = CTX + 'nc/' + encodeURIComponent(so);
+          return uploadAll(so).then(function(failed){
+            if(failed.length === 0){ location.href = url; return; }
+            // Phiếu đã tạo nhưng một số file lỗi: ở lại để báo, kèm link mở phiếu (đính kèm lại ở trang chi tiết).
+            var el = document.getElementById('err');
+            el.style.display = 'block';
+            el.innerHTML = '';
+            el.appendChild(document.createTextNode('Đã tạo phiếu ' + so + ' nhưng chưa tải được file: ' + failed.join(', ') + '. '));
+            var a = document.createElement('a'); a.href = url; a.textContent = 'Mở phiếu để đính kèm lại';
+            el.appendChild(a);
+          });
         }).catch(function(err){
-          var el = document.getElementById('err'); el.style.display='block'; el.textContent='Lỗi mạng: '+err;
-        }).finally(function(){ sbtn.disabled = false; sbtn.textContent = sLabel; });
+          showErr('Lỗi mạng: ' + err);
+          sbtn.disabled = false; sbtn.textContent = sLabel;
+        });
     });
   </script>
 </body>

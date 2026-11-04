@@ -171,6 +171,19 @@ public class NcService {
     }
 
     /**
+     * N7: Rejected -> PendingApproval. QA nhà máy nộp lại đề xuất đã sửa (disposition, chi phí, nguyên nhân...).
+     * Dùng chung logic với submitApproval (reset duyệt cấp 1, ghi người đề xuất mới cho SoD).
+     */
+    @Transactional
+    public Nc resubmit(String soHieu, SubmitApprovalRequest req) {
+        Nc nc = layNc(soHieu);
+        if (nc.getTrangThai() != NcStatus.Rejected) {
+            throw BusinessException.guard("resubmit chỉ từ Rejected, hiện tại: " + nc.getTrangThai());
+        }
+        return submitApproval(soHieu, req);
+    }
+
+    /**
      * N5: PendingApproval -> Processing.
      * NC Nghiêm trọng: QA TĐ duyệt 1 lần. NC Nặng: 2 lượt bởi 2 user khác nhau (API §6.2).
      * SoD (§2.2): người đề xuất disposition không được duyệt cấp 1.

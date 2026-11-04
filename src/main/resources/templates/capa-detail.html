@@ -29,6 +29,24 @@
 
   <div class="detail">
     <div style="display:flex;flex-direction:column;gap:24px">
+      <!-- Bối cảnh vấn đề: lấy từ NC gốc để người xử lý CAPA không phải nhập lại -->
+      <section class="panel" th:if="${!ncGoc.isEmpty()}">
+        <h2>Vấn đề từ NC gốc</h2>
+        <div class="body">
+          <div th:each="n : ${ncGoc}" style="margin-bottom:12px">
+            <a class="id" th:href="@{/nc/{s}(s=${n.soHieu})}" th:text="${n.soHieu}">NC</a>
+            <span class="pill" th:text="${nhan.mucNghiemTrong(n.mucNghiemTrong)}" style="margin-left:6px">—</span>
+            <dl class="kv" style="margin-top:8px">
+              <dt>Mã hàng / mã lỗi</dt><dd class="id" th:text="(${n.maHangChinh} ?: '—') + ' / ' + (${n.maLoiChinh} ?: '—')">—</dd>
+              <dt>Mô tả lỗi</dt><dd th:text="${n.moTaLoi} ?: '—'" style="white-space:pre-wrap">—</dd>
+              <dt>Nguyên nhân (sau điều tra)</dt><dd th:text="${n.nguyenNhanDieuTra} ?: (${n.nguyenNhanSoBo} ?: '—')" style="white-space:pre-wrap">—</dd>
+              <dt>Giải pháp / ghi chú xử lý</dt><dd th:text="${n.giaiPhapXuLy} ?: '—'" style="white-space:pre-wrap">—</dd>
+              <dt>Disposition</dt><dd th:text="${n.dispositionDeXuat != null} ? ${nhan.disposition(n.dispositionDeXuat)} : '—'">—</dd>
+            </dl>
+          </div>
+        </div>
+      </section>
+
       <section class="panel">
         <h2>Thông tin CAPA</h2>
         <div class="body">
@@ -43,11 +61,20 @@
             <dt>Ngăn tái diễn</dt><dd th:text="${capa.nganTaiDien} ?: '—'">—</dd>
             <dt>Nguyên nhân gốc</dt><dd th:text="${capa.rcaNoiDung} ?: '—'">—</dd>
             <dt>Công cụ RCA</dt><dd th:text="${capa.rcaMethod != null} ? ${nhan.rca(capa.rcaMethod)} : '—'">—</dd>
-            <dt>Chi tiết RCA</dt><dd th:text="${capa.rcaData} ?: '—'" style="white-space:pre-wrap;font-family:var(--mono);font-size:12.5px">—</dd>
+            <dt>Chi tiết RCA</dt><dd id="rca-view" th:text="${capa.rcaData} ?: '—'"
+                th:attr="data-method=${capa.rcaMethod != null ? capa.rcaMethod.name() : null}"
+                style="white-space:pre-wrap;font-size:13px">—</dd>
             <dt>Nhóm nguyên nhân (6M)</dt><dd th:text="${capa.nhomNguyenNhan6m != null} ? ${nhan.nhom6m(capa.nhomNguyenNhan6m)} : (${capa.nhomNguyenNhan} ?: '—')">—</dd>
             <dt>Tái diễn</dt><dd th:text="${capa.taiDien} ? 'Có' : 'Không'">—</dd>
             <dt>Kế hoạch điều tra</dt><dd th:text="${capa.khMucTieu} ?: (${capa.keHoachDieuTra} ?: '—')">—</dd>
-            <dt>RPN (S×O×D)</dt><dd th:text="${capa.rpn() != null} ? ${capa.rpn()} : '—'">—</dd>
+            <dt>Người điều tra</dt><dd th:text="${capa.nguoiDieuTra} ?: '—'">—</dd>
+            <dt>Yêu cầu pháp lý</dt><dd th:text="${capa.coYeuCauPhapLy} ? 'Có' : 'Không'">—</dd>
+            <dt>RPN (S×O×D)</dt><dd th:if="${capa.rpn() != null}">
+              <span th:text="${capa.rpnS} + ' × ' + ${capa.rpnO} + ' × ' + ${capa.rpnD} + ' = ' + ${capa.rpn()}">—</span>
+              <span class="pill" th:text="${capa.rpnMuc()}" style="margin-left:6px"
+                    th:style="${capa.rpnMuc() == 'High'} ? 'margin-left:6px;background:var(--hold-weak);color:var(--hold)' : 'margin-left:6px'">—</span>
+            </dd>
+            <dd th:if="${capa.rpn() == null}">—</dd>
             <dt>Chi phí đầu tư</dt><dd th:text="${capa.chiPhiDauTu != null} ? ${#numbers.formatDecimal(capa.chiPhiDauTu,0,'COMMA',0,'POINT')} + ' ₫' : '—'">—</dd>
             <dt>Mốc kiểm chứng</dt><dd>
               <span th:text="${capa.XNgay} != null ? ('X = ' + ${capa.XNgay} + ' ngày') : 'chưa đặt'">—</span>
@@ -69,7 +96,21 @@
                 <td class="muted" th:text="${nhan.loaiHanhDong(a.loaiHanhDong)}">—</td>
                 <td th:text="${a.moTa} ?: '—'" style="max-width:220px;min-width:140px;white-space:normal;overflow-wrap:anywhere">—</td>
                 <td class="muted" th:text="${a.nguoiPhuTrach}">—</td>
-                <td class="muted" th:text="${a.deadline}">—</td>
+                <td class="muted">
+                  <span th:text="${a.deadline}">—</span>
+                  <span class="pill" th:if="${a.trangThai.name() != 'Completed' and a.deadline.isBefore(homNay)}"
+                        style="background:var(--hold-weak);color:var(--hold);margin-left:4px">Quá hạn</span>
+                  <button th:if="${a.trangThai.name() != 'Completed'}" class="btn"
+                          style="padding:2px 8px;font-size:12px;margin-left:6px"
+                          th:data-extend="${a.id}" th:data-deadline="${a.deadline}">Gia hạn</button>
+                  <div th:each="e : ${giaHan.get(a.id)}" th:if="${e.trangThai.name() == 'PENDING'}"
+                       style="margin-top:4px;font-size:12px">
+                    Chờ duyệt gia hạn → <b th:text="${e.deadlineMoi}">—</b>
+                    <span th:text="'('+ ${e.lyDo} + ' · '+ ${e.nguoiYeuCau} + ')'">—</span>
+                    <button th:if="${quyen.laQa}" class="btn" style="padding:2px 8px;font-size:12px;margin-left:6px"
+                            th:data-ext-approve="${e.id}">Duyệt</button>
+                  </div>
+                </td>
                 <td><span class="pill st" th:text="${nhan.actionStatus(a.trangThai)}">—</span>
                   <button th:if="${a.trangThai.name() != 'Completed'}" class="btn"
                           style="padding:2px 8px;font-size:12px;margin-left:6px"
@@ -151,6 +192,12 @@
     window.CTX = (/*[[@{/}]]*/ '/').split(';')[0];
     // actor mặc định LẤY TỪ tài khoản hiện tại (bơm từ view); cho phép sửa trong modal.
     window.CAPA_ACTOR = /*[[${currentUser != null ? currentUser.username() : 'qademo'}]]*/ 'qademo';
+    window.CAPA_NGUOI_DIEU_TRA = /*[[${capa.nguoiDieuTra}]]*/ '';
+    // Gợi ý điền sẵn từ NC gốc đầu tiên (người dùng vẫn sửa được trong modal).
+    window.NC_GOC = {
+      nguyenNhan: /*[[${ncGoc.isEmpty() ? '' : (ncGoc[0].nguyenNhanDieuTra ?: (ncGoc[0].nguyenNhanSoBo ?: ''))}]]*/ '',
+      giaiPhap: /*[[${ncGoc.isEmpty() ? '' : (ncGoc[0].giaiPhapXuLy ?: '')}]]*/ ''
+    };
   </script>
   <script th:inline="none">
     // Gọi API nghiệp vụ qua MODAL FORM dùng chung (không còn prompt/confirm từng mục).
@@ -174,19 +221,26 @@
         { label:'Mục tiêu điều tra', name:'khMucTieu', type:'text' },
         { label:'Phương pháp', name:'khPhuongPhap', type:'text' },
         { label:'Nguồn lực', name:'khNguonLuc', type:'text' },
+        { label:'Người điều tra (username)', name:'nguoiDieuTra', type:'text', default: window.CAPA_NGUOI_DIEU_TRA || '' },
         actorField() ] },
       'to-action-plan': { title:'Lập kế hoạch hành động', fields:[
         { label:'Công cụ RCA', name:'rcaMethod', type:'select', default:'FIVE_WHY',
           options:labelOpts('rca', ['FIVE_WHY','FISHBONE','IS_IS_NOT']) },
-        { label:'Nội dung RCA (JSON/text)', name:'rcaData', type:'textarea', default:'{"w1":"","w2":"","w3":""}' },
-        { label:'Kết luận nguyên nhân gốc', name:'rcaNoiDung', type:'textarea' },
+        { label:'Nội dung RCA', name:'rcaData', type:'textarea', default:'' },
+        { label:'Kết luận nguyên nhân gốc', name:'rcaNoiDung', type:'textarea', default: (window.NC_GOC || {}).nguyenNhan || '' },
         { label:'Nhóm nguyên nhân (6M)', name:'nhomNguyenNhan6m', type:'select', default:'METHOD',
           options:labelOpts('nhom6m', ['MAN','MACHINE','MATERIAL','METHOD','MEASURE','ENVIRONMENT']) },
         { label:'Vấn đề có tái diễn?', name:'taiDien', type:'checkbox', default:false },
         { label:'Chi phí đầu tư', name:'chiPhiDauTu', type:'number', min:0, default:0 },
-        actorField() ] },
+        { label:'Có yêu cầu pháp lý / báo cáo cơ quan chức năng?', name:'coYeuCauPhapLy', type:'checkbox', default:false },
+        { label:'RPN — S: mức nghiêm trọng (1–5)', name:'rpnS', type:'number', min:1, max:5 },
+        { label:'RPN — O: tần suất xảy ra (1–5)', name:'rpnO', type:'number', min:1, max:5 },
+        { label:'RPN — D: khả năng phát hiện (1–5, 5 = khó phát hiện)', name:'rpnD', type:'number', min:1, max:5 },
+        actorField() ],
+        onOpen: function(m){ RcaForm.mount(m); },
+        beforeCollect: function(m){ RcaForm.collect(m); } },
       'to-processing': { title:'Chuyển sang Xử lý', fields:[
-        { label:'Khắc phục tức thời', name:'khacPhucTucThoi', type:'textarea' },
+        { label:'Khắc phục tức thời', name:'khacPhucTucThoi', type:'textarea', default: (window.NC_GOC || {}).giaiPhap || '' },
         { label:'Ngăn tái diễn', name:'nganTaiDien', type:'textarea' },
         actorField() ] },
       'to-monitoring': { title:'Chuyển sang Theo dõi', fields:[
@@ -219,6 +273,70 @@
         { label:'Lý do', name:'lyDo', type:'text' },
         actorField() ] }
     };
+    // ====== RcaForm: dựng ô nhập theo công cụ RCA; gộp thành JSON vào field rcaData khi gửi ======
+    var RcaForm = (function(){
+      var DEFS = {
+        FIVE_WHY: [['w1','Why 1 — Vì sao xảy ra?'],['w2','Why 2 — Vì sao (1)?'],['w3','Why 3 — Vì sao (2)?'],
+                   ['w4','Why 4 — Vì sao (3)?'],['w5','Why 5 — Nguyên nhân gốc?']],
+        FISHBONE: [['man','Con người'],['machine','Máy móc'],['material','Nguyên vật liệu'],
+                   ['method','Phương pháp'],['measure','Đo lường'],['environment','Môi trường']],
+        IS_IS_NOT: [['is_what','LÀ — Cái gì bị lỗi?'],['not_what','KHÔNG LÀ — Cái gì lẽ ra bị nhưng không?'],
+                    ['is_where','LÀ — Ở đâu?'],['not_where','KHÔNG LÀ — Ở đâu không bị?'],
+                    ['is_when','LÀ — Khi nào?'],['not_when','KHÔNG LÀ — Khi nào không bị?'],
+                    ['is_extent','LÀ — Quy mô / mức độ?'],['not_extent','KHÔNG LÀ — Quy mô không bị?']]
+      };
+      var box = null;
+      function build(m){
+        var method = m.controlOf('rcaMethod').value;
+        box.innerHTML = '';
+        (DEFS[method] || []).forEach(function(p){
+          var wrap = document.createElement('div'); wrap.className = 'modal-field';
+          var lab = document.createElement('label'); lab.textContent = p[1]; lab.setAttribute('for', 'rca-' + p[0]);
+          var inp = document.createElement('textarea'); inp.id = 'rca-' + p[0]; inp.setAttribute('data-rca-key', p[0]);
+          inp.rows = 1;
+          wrap.appendChild(lab); wrap.appendChild(inp); box.appendChild(wrap);
+        });
+      }
+      return {
+        mount: function(m){
+          var data = m.controlOf('rcaData');
+          var dataWrap = data.closest('.modal-field');
+          dataWrap.hidden = true;               // ẩn ô JSON thô; thay bằng ô theo công cụ
+          box = document.createElement('div');
+          dataWrap.parentNode.insertBefore(box, dataWrap.nextSibling);
+          var sel = m.controlOf('rcaMethod');
+          sel.addEventListener('change', function(){ build(m); });
+          build(m);
+        },
+        // Chuyển JSON lưu trữ thành các dòng 'Nhãn: nội dung' để đọc trên trang chi tiết.
+        pretty: function(method, raw){
+          try {
+            var o = JSON.parse(raw), defs = DEFS[method] || [], lines = [];
+            defs.forEach(function(p){ if(o[p[0]]) lines.push(p[1] + ': ' + o[p[0]]); });
+            Object.keys(o).forEach(function(k){
+              if(!defs.some(function(p){ return p[0] === k; })) lines.push(k + ': ' + o[k]);
+            });
+            return lines.length ? lines.join('\n') : raw;
+          } catch(e){ return raw; }   // dữ liệu cũ dạng text tự do: giữ nguyên
+        },
+        collect: function(m){
+          var obj = {}, any = false;
+          box.querySelectorAll('[data-rca-key]').forEach(function(el){
+            var v = el.value.trim();
+            if(v){ obj[el.getAttribute('data-rca-key')] = v; any = true; }
+          });
+          m.controlOf('rcaData').value = any ? JSON.stringify(obj) : '';
+        }
+      };
+    })();
+
+    (function(){
+      var v = document.getElementById('rca-view');
+      if(v && v.textContent.trim().charAt(0) === '{'){
+        v.textContent = RcaForm.pretty(v.getAttribute('data-method'), v.textContent.trim());
+      }
+    })();
+
     // Action dùng endpoint khác api/v1/capa/{id}/{action}.
     var CAPA_ENDPOINT = {
       'add-action': function(id){ return CTX + 'api/v1/capa/'+id+'/actions'; },
@@ -234,7 +352,36 @@
         ActionModal.open({
           title: schema.title,
           fields: schema.fields,
+          onOpen: schema.onOpen,
+          beforeCollect: schema.beforeCollect,
           onSubmit: function(body, api){ post(url, body, api); }
+        });
+      });
+    });
+
+    // Gia hạn action: yêu cầu (hạn mới + lý do) -> chờ duyệt -> duyệt mới đổi deadline.
+    document.querySelectorAll('button[data-extend]').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        var aid = btn.getAttribute('data-extend');
+        var hanHienTai = btn.getAttribute('data-deadline') || '';
+        ActionModal.open({
+          title: 'Yêu cầu gia hạn action #' + aid + (hanHienTai ? ' (hạn hiện tại ' + hanHienTai + ')' : ''),
+          fields: [
+            { label:'Hạn mới', name:'deadlineMoi', type:'date', required:true },
+            { label:'Lý do gia hạn', name:'lyDo', type:'textarea', required:true },
+            actorField() ],
+          onSubmit: function(body, api){ post(CTX + 'api/v1/capa/actions/'+aid+'/extension', body, api); }
+        });
+      });
+    });
+
+    document.querySelectorAll('button[data-ext-approve]').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        var eid = btn.getAttribute('data-ext-approve');
+        ActionModal.open({
+          title: 'Duyệt gia hạn #' + eid,
+          fields: [ actorField() ],
+          onSubmit: function(body, api){ post(CTX + 'api/v1/capa/actions/ext/'+eid+'/approve', body, api); }
         });
       });
     });

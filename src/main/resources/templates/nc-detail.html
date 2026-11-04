@@ -46,11 +46,28 @@
             <dt>Nguồn phát sinh</dt><dd th:text="${nhan.nguon(nc.nguonPhatSinh)}">—</dd>
             <dt>Nhà máy</dt><dd th:text="${nc.nhaMay}">—</dd>
             <dt>Lô kiểm</dt><dd class="id" th:text="${nc.loKiem} ?: '—'">—</dd>
+            <dt>Ngày sản xuất</dt><dd th:text="${nc.ngaySx} ?: '—'">—</dd>
+            <dt>Khu vực</dt><dd th:text="${nc.khuVuc} ?: '—'">—</dd>
+            <dt>Lệnh sản xuất</dt><dd class="id" th:text="${nc.lenhSx} ?: '—'">—</dd>
+            <dt>Công đoạn</dt><dd th:text="${nc.congDoan} ?: '—'">—</dd>
+            <dt>Số lượng</dt><dd th:text="${nc.soLuong} ?: '—'">—</dd>
             <dt>Mã hàng chính</dt><dd class="id" th:text="${nc.maHangChinh} ?: '—'">—</dd>
             <dt>Mã lỗi chính</dt><dd class="id" th:text="${nc.maLoiChinh} ?: '—'">—</dd>
             <dt>An toàn TP</dt><dd th:text="${nc.foodSafety} ? 'Có' : 'Không'">—</dd>
+            <dt>Mô tả lỗi</dt><dd th:text="${nc.moTaLoi} ?: '—'" style="white-space:pre-wrap">—</dd>
+            <dt>Nguyên nhân sơ bộ</dt><dd th:text="${nc.nguyenNhanSoBo} ?: '—'" style="white-space:pre-wrap">—</dd>
+            <dt>Nguyên nhân sau điều tra</dt><dd th:text="${nc.nguyenNhanDieuTra} ?: '—'" style="white-space:pre-wrap">—</dd>
+            <dt>Giải pháp / ghi chú xử lý</dt><dd th:text="${nc.giaiPhapXuLy} ?: '—'" style="white-space:pre-wrap">—</dd>
+            <dt>Disposition đề xuất</dt><dd th:text="${nc.dispositionDeXuat != null} ? ${nhan.disposition(nc.dispositionDeXuat)} : '—'">—</dd>
+            <dt>Bộ phận thực hiện</dt><dd th:text="${nc.boPhanThucHien} ?: '—'">—</dd>
+            <dt>Kết quả thực tế</dt><dd th:text="${nc.ketQuaXuLy} ?: '—'" style="white-space:pre-wrap">—</dd>
+            <dt>Bằng chứng</dt><dd th:text="${nc.bangChung} ?: '—'">—</dd>
             <dt>Chi phí ước tính</dt><dd th:text="${nc.chiPhiUocTinh != null} ? ${#numbers.formatDecimal(nc.chiPhiUocTinh,0,'COMMA',0,'POINT')} + ' ₫' : '—'">—</dd>
             <dt>Chi phí thực tế</dt><dd th:text="${nc.chiPhiThucTe != null} ? ${#numbers.formatDecimal(nc.chiPhiThucTe,0,'COMMA',0,'POINT')} + ' ₫' : '—'">—</dd>
+            <dt>Kết luận thẩm tra</dt><dd style="white-space:pre-wrap">
+              <span th:if="${nc.ketQuaThamTra != null}" class="pill"
+                    th:text="${nc.ketQuaThamTra == 'DAT'} ? 'Đạt' : 'Không đạt'" style="margin-right:6px">—</span>
+              <span th:text="${nc.ketLuanThamTra} ?: '—'">—</span></dd>
           </dl>
         </div>
       </section>
@@ -82,13 +99,20 @@
         <div class="body">
           <div class="table-wrap">
           <table>
-            <thead><tr><th>Loại</th><th>Giá trị</th><th>Khoanh vùng</th><th>Trạng thái lô</th></tr></thead>
+            <thead><tr><th>Loại</th><th>Giá trị</th><th>Khoanh vùng</th><th>Trạng thái lô</th><th>Chứng từ Hold</th><th>Chứng từ Unhold</th><th></th></tr></thead>
             <tbody>
               <tr th:each="d : ${doiTuong}">
                 <td class="muted" th:text="${d.loaiDoiTuong}">—</td>
                 <td class="id" th:text="${d.giaTri}">—</td>
                 <td th:text="${d.khoanhVung} ? 'Có' : '—'">—</td>
                 <td th:text="${d.trangThaiDongLo} ?: '—'">—</td>
+                <td class="muted" th:text="${d.chungTuHold} ?: '—'">—</td>
+                <td class="muted" th:text="${d.chungTuUnhold} ?: '—'">—</td>
+                <td>
+                  <button class="btn" style="padding:2px 8px;font-size:12px"
+                          th:if="${d.khoanhVung and nc.trangThai.name() == 'Processing' and quyen.laQa}"
+                          th:data-unhold="${d.id}" th:data-lo="${d.giaTri}">Gỡ khoanh</button>
+                </td>
               </tr>
             </tbody>
           </table>
@@ -103,7 +127,9 @@
         <h2>Bước kế tiếp</h2>
         <div class="body">
           <div class="actions" th:if="${!hanhDong.isEmpty()}"
-               th:attr="data-actor=${currentUser != null ? currentUser.username() : 'qademo'}">
+               th:attr="data-actor=${currentUser != null ? currentUser.username() : 'qademo'},
+                        data-nn-so-bo=${nc.nguyenNhanSoBo},data-nn-dieu-tra=${nc.nguyenNhanDieuTra},data-gp=${nc.giaiPhapXuLy},data-disposition=${nc.dispositionDeXuat},
+                        data-chi-phi=${nc.chiPhiUocTinh},data-bo-phan=${nc.boPhanThucHien},data-lo-kiem=${nc.loKiem}">
             <!--
               Gating theo vai trò (CHỈ thêm th:if; giữ nguyên logic hiển thị theo trạng thái):
               - approve/reject NC Nặng: QA (nhà máy + tập đoàn); NC Nghiêm trọng: chỉ QA tập đoàn.
@@ -190,6 +216,24 @@
     var actionsBox = document.querySelector('.actions');
     var currentActor = (actionsBox && actionsBox.getAttribute('data-actor')) || 'qademo';
 
+    function attr(n){ return (actionsBox && actionsBox.getAttribute(n)) || ''; }
+
+    // Tải file bằng chứng (field 'file' của modal) lên NC rồi gọi next(); lỗi tải -> báo trong modal, không đóng.
+    function uploadModalFile(so, actor, api, next){
+      var fileEl = document.getElementById('mf-file');
+      if(!fileEl || !fileEl.files || fileEl.files.length === 0){ next(); return; }
+      var fd = new FormData();
+      fd.append('doiTuong', 'NC'); fd.append('doiTuongId', so);
+      fd.append('file', fileEl.files[0]); fd.append('actor', actor);
+      fetch(CTX + 'api/v1/attachment', { method:'POST', body: fd })
+        .then(function(r){ return r.json(); })
+        .then(function(r){
+          if(r.success){ next(); }
+          else { api.serverError('Đã lưu phiếu nhưng không tải được file: ' + (r.error ? r.error.message : 'lỗi') + '. Đính kèm lại ở mục File đính kèm.'); }
+        })
+        .catch(function(e){ api.serverError('Đã lưu phiếu nhưng lỗi mạng khi tải file: ' + e); });
+    }
+
     function actorField(){
       return { label:'Người thực hiện (username)', name:'actor', type:'text', required:true, default:currentActor };
     }
@@ -207,19 +251,59 @@
         { label:'Lý do huỷ phiếu', name:'lyDo', type:'text', required:true }, actorField() ] },
       'close-fast': { title:'Đóng nhanh', fields:[
         { label:'Kết quả xử lý', name:'ketQuaXuLy', type:'textarea', required:true }, actorField() ] },
+      'approve': { title:'Duyệt phiếu', fields:[
+        { label:'Ý kiến duyệt (tuỳ chọn)', name:'yKien', type:'textarea' }, actorField() ] },
       'confirm-done': { title:'Xác nhận hoàn thành', fields:[
-        { label:'Bằng chứng', name:'bangChung', type:'text', required:true },
+        { label:'Kết quả thực tế sau xử lý', name:'ketQuaThucTe', type:'textarea', required:true },
+        { label:'Bằng chứng (số chứng từ / ghi chú)', name:'bangChung', type:'text' },
         { label:'Chi phí thực tế', name:'chiPhiThucTe', type:'number', required:true, min:0, default:0 },
+        { label:'File bằng chứng (tuỳ chọn)', name:'file', type:'file' },
         actorField() ] },
-      'verify-close': { title:'Thẩm tra & đóng', fields:[
-        { label:'Kết luận thẩm tra', name:'ketLuanThamTra', type:'textarea', required:true }, actorField() ] },
+      'verify-close': { title:'Thẩm tra', fields:[
+        { label:'Kết quả thẩm tra', name:'ketQuaThamTra', type:'select', default:'DAT',
+          options:[{value:'DAT',label:'Đạt — đóng phiếu'},{value:'KHONG_DAT',label:'Không đạt — trả về Đang xử lý'}] },
+        { label:'Kết luận thẩm tra (nếu không đạt: nêu rõ cần làm lại gì)', name:'ketLuanThamTra', type:'textarea', required:true },
+        actorField() ] },
       'submit-approval': { title:'Trình phê duyệt disposition', fields:[
-        { label:'Nguyên nhân sơ bộ', name:'nguyenNhanSoBo', type:'textarea', required:true },
-        { label:'Disposition đề xuất', name:'dispositionDeXuat', type:'select', default:'REWORK',
+        { label:'Nguyên nhân sau điều tra (sửa lại nếu khác sơ bộ)', name:'nguyenNhanDieuTra', type:'textarea', required:true,
+          default: attr('data-nn-dieu-tra') || attr('data-nn-so-bo') },
+        { label:'Giải pháp / ghi chú xử lý', name:'giaiPhapXuLy', type:'textarea', default: attr('data-gp') },
+        { label:'Disposition đề xuất', name:'dispositionDeXuat', type:'select', default: attr('data-disposition') || 'REWORK',
           options:labelOpts('disposition', ['REWORK','RETURN_NCC','HA_CAP','TAI_CHE','TIEU_HUY']) },
-        { label:'Chi phí ước tính', name:'chiPhiUocTinh', type:'number', required:true, min:0, default:0 },
-        { label:'Bộ phận thực hiện', name:'boPhanThucHien', type:'text', required:true, default:'SX' },
+        { label:'Chi phí ước tính', name:'chiPhiUocTinh', type:'number', required:true, min:0, default: attr('data-chi-phi') || 0 },
+        { label:'Bộ phận thực hiện', name:'boPhanThucHien', type:'text', required:true, default: attr('data-bo-phan') || 'SX' },
         actorField() ] }
+    };
+
+    // Nộp lại sau khi bị từ chối: cùng form với Trình duyệt, điền sẵn đề xuất cũ để QA sửa.
+    NC_SCHEMAS['resubmit'] = {
+      title: 'Nộp lại đề xuất (đã sửa)',
+      fields: NC_SCHEMAS['submit-approval'].fields
+    };
+
+    // Khoanh vùng (hold hàng): mỗi dòng 'số lô | chứng từ Hold EBS / đường dẫn ảnh trạng thái lô'.
+    NC_SCHEMAS['containment'] = {
+      title: 'Khoanh vùng (Hold)',
+      fields: [
+        { label:'Danh sách lô khoanh — mỗi dòng: số lô | chứng từ Hold (mã EBS hoặc đường dẫn ảnh)',
+          name:'dsLo', type:'textarea', required:true,
+          default: attr('data-lo-kiem') ? (attr('data-lo-kiem') + ' | ') : '' },
+        actorField() ],
+      transform: function(body, api){
+        var out = [], bad = null;
+        String(body.dsLo || '').split(/\r?\n/).forEach(function(line){
+          var s = line.trim();
+          if(!s) return;
+          var i = s.indexOf('|');
+          var lo = (i < 0 ? s : s.slice(0, i)).trim();
+          var ct = (i < 0 ? '' : s.slice(i + 1)).trim();
+          if(!lo || !ct){ bad = bad || s; return; }
+          out.push({ soLo: lo, chungTuHold: ct });
+        });
+        if(bad){ api.serverError('Dòng "' + bad + '" thiếu số lô hoặc chứng từ Hold (định dạng: số lô | chứng từ).'); return null; }
+        if(out.length === 0){ api.serverError('Cần ít nhất một lô khoanh.'); return null; }
+        return { loKhoanh: out, actor: body.actor };
+      }
     };
 
     function postNc(so, action, body, api){
@@ -248,7 +332,38 @@
         ActionModal.open({
           title: schema.title,
           fields: schema.fields,
-          onSubmit: function(body, api){ postNc(so, action, body, api); }
+          onSubmit: function(body, api){
+            var b = schema.transform ? schema.transform(body, api) : body;
+            if(b === null) return;   // transform đã báo lỗi trong modal
+            postNc(so, action, b, api);
+          }
+        });
+      });
+    });
+
+    // Gỡ khoanh từng dòng lô (Processing): chứng từ Unhold + trạng thái cuối của lô.
+    document.querySelectorAll('button[data-unhold]').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        var id = btn.getAttribute('data-unhold');
+        var lo = btn.getAttribute('data-lo');
+        var so = document.getElementById('att-list').getAttribute('data-so');
+        ActionModal.open({
+          title: 'Gỡ khoanh lô ' + lo,
+          fields: [
+            { label:'Trạng thái cuối của lô', name:'trangThaiDongLo', type:'select', default:'Released',
+              options:[{value:'Released',label:'Released — được xuất/dùng'},
+                       {value:'Reworked',label:'Reworked — đã làm lại'},
+                       {value:'Scrapped',label:'Scrapped — huỷ bỏ'}] },
+            { label:'Chứng từ Unhold (mã EBS hoặc đường dẫn ảnh)', name:'chungTuUnhold', type:'text', required:true },
+            actorField() ],
+          onSubmit: function(body, api){
+            fetch(CTX + 'api/v1/nc/' + encodeURIComponent(so) + '/doi-tuong/' + id + '/unhold', {
+              method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)
+            }).then(function(r){ return r.json(); }).then(function(res){
+              if(res.success){ location.reload(); }
+              else { api.serverError('Không thực hiện được: ' + (res.error ? res.error.message : 'lỗi')); }
+            }).catch(function(e){ api.serverError('Lỗi mạng: ' + e); });
+          }
         });
       });
     });

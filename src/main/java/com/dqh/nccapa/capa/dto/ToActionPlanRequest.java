@@ -12,6 +12,7 @@ public class ToActionPlanRequest {
     public com.dqh.nccapa.common.enums.NhomNguyenNhan6M nhomNguyenNhan6m;  // 6M
     public Boolean taiDien;                   // cờ tái diễn
     public BigDecimal chiPhiDauTu;
+    public Boolean coYeuCauPhapLy;            // có yêu cầu pháp lý / báo cáo cơ quan chức năng
     public Integer rpnS;
     public Integer rpnO;
     public Integer rpnD;

@@ -8,5 +8,6 @@ public class ToInvestigatingRequest {
     public String khMucTieu;        // mục tiêu
     public String khPhuongPhap;     // phương pháp
     public String khNguonLuc;       // nguồn lực
+    public String nguoiDieuTra;     // người điều tra (tuỳ chọn; mặc định = người tạo CAPA)
     @NotBlank public String actor;
 }

@@ -52,6 +52,9 @@ public class CapaActionExtension {
 
     public Long getId() { return id; }
     public Long getActionId() { return actionId; }
+    public String getLyDo() { return lyDo; }
+    public String getNguoiDuyet() { return nguoiDuyet; }
+    public LocalDateTime getCreatedAt() { return createdAt; }
     public LocalDate getDeadlineMoi() { return deadlineMoi; }
     public ExtensionStatus getTrangThai() { return trangThai; }
     public String getNguoiYeuCau() { return nguoiYeuCau; }
