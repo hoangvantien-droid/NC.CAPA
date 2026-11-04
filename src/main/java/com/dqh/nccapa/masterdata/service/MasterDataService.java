@@ -94,6 +94,24 @@ public class MasterDataService {
                 "label", rs.getString("ma") + " — " + rs.getString("ten")));
     }
 
+    /**
+     * Lựa chọn cho form SỬA: gồm cả bản ghi ngừng dùng (nhãn "(ngừng dùng)", ngung=1) để cha hiện tại
+     * của bản ghi luôn có trong dropdown, tránh form âm thầm chuyển sang cha khác.
+     */
+    public List<Map<String, String>> luaChonTatCa(MasterDataLoai loai) {
+        String sql = switch (loai) {
+            case NHA_MAY -> "SELECT ma, ten, active FROM nha_may ORDER BY ma";
+            case NHOM_LOI -> "SELECT nhom_loi_id AS ma, ten_nhom AS ten, active FROM nhom_loi ORDER BY nhom_loi_id";
+            default -> throw new IllegalArgumentException("Không hỗ trợ dropdown cho " + loai);
+        };
+        return jdbc.query(sql, (rs, i) -> {
+            boolean ngung = rs.getInt("active") == 0;
+            return Map.of("value", rs.getString("ma"),
+                    "label", rs.getString("ma") + " — " + rs.getString("ten") + (ngung ? " (ngừng dùng)" : ""),
+                    "ngung", ngung ? "1" : "0");
+        });
+    }
+
     // ---------------- Ghi ----------------
 
     @Transactional

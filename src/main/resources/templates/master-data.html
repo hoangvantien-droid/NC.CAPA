@@ -93,6 +93,10 @@
       var API = CTX + 'api/v1/masterdata/' + MD.loai;
 
       // Schema form theo danh mục. edit=true: bỏ trường mã (khoá chính không sửa được).
+      // Thêm: chỉ lựa chọn đang dùng. Sửa: giữ thêm cha hiện tại nếu đã ngừng dùng (tránh đổi cha âm thầm).
+      function opts(list, edit, curVal){
+        return list.filter(function(o){ return o.ngung !== '1' || (edit && o.value === curVal); });
+      }
       function schema(edit, cur){
         cur = cur || {};
         var f = [];
@@ -102,14 +106,14 @@
         else f.push({ name:'ten', label:'Tên', type:'text', required:true, default:cur.ten });
 
         if(MD.loai === 'ma-hang'){
-          f.push({ name:'nhaMay', label:'Nhà máy', type:'select', required:true, options:MD.nhaMayOpts, default:cur.nhaMay });
+          f.push({ name:'nhaMay', label:'Nhà máy', type:'select', required:true, options:opts(MD.nhaMayOpts, edit, cur.nhaMay), default:cur.nhaMay });
         } else if(MD.loai === 'nhom-loi'){
           f.push({ name:'theoNguon', label:'Theo nguồn', type:'text', required:true, default:cur.theoNguon });
         } else if(MD.loai === 'ncc'){
           f.push({ name:'coGiayCn', label:'Có giấy chứng nhận', type:'checkbox', default:cur.coGiayCn });
           f.push({ name:'cnHetHanNgay', label:'Chứng nhận hết hạn ngày', type:'date', default:cur.cnHetHanNgay });
         } else if(MD.loai === 'ma-loi'){
-          f.push({ name:'nhomLoiId', label:'Nhóm lỗi', type:'select', required:true, options:MD.nhomLoiOpts, default:cur.nhomLoiId });
+          f.push({ name:'nhomLoiId', label:'Nhóm lỗi', type:'select', required:true, options:opts(MD.nhomLoiOpts, edit, cur.nhomLoiId), default:cur.nhomLoiId });
           f.push({ name:'mucNghiemTrongDefault', label:'Mức nghiêm trọng mặc định', type:'select', required:true,
                    options:labelOpts('mucNghiemTrong', ['NHE','NANG','NGHIEM_TRONG']), default:cur.mucNghiemTrongDefault });
           f.push({ name:'moiNguyDefault', label:'Mối nguy mặc định', type:'select', required:true,

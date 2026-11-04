@@ -44,6 +44,21 @@ public class DefectCatalogService {
         }
     }
 
+    /**
+     * Đối tượng NC mới kiểu NCC / MA_HANG mà đã ngừng dùng thì bị chặn (chỉ chặn khi biết chắc active=0).
+     * NC do hệ thống tự sinh (AutoAggregationService) KHÔNG qua kiểm tra này: sự kiện đã xảy ra, không từ chối được.
+     */
+    public void kiemTraDoiTuongDangDung(String loaiDoiTuong, String giaTri) {
+        if (loaiDoiTuong == null || giaTri == null) return;
+        String loai = loaiDoiTuong.trim().toUpperCase();
+        if (loai.equals("NCC") && ngung("SELECT COUNT(*) FROM ncc WHERE ma = ? AND active = 0", giaTri.trim())) {
+            throw BusinessException.businessRule("Nhà cung cấp " + giaTri + " đã ngừng dùng", "doiTuong");
+        }
+        if (loai.equals("MA_HANG") && ngung("SELECT COUNT(*) FROM ma_hang WHERE ma = ? AND active = 0", giaTri.trim())) {
+            throw BusinessException.businessRule("Mã hàng " + giaTri + " đã ngừng dùng", "doiTuong");
+        }
+    }
+
     private boolean ngung(String sql, String ma) {
         Integer n = jdbc.queryForObject(sql, Integer.class, ma);
         return n != null && n > 0;

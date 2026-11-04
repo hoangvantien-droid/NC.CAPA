@@ -193,6 +193,50 @@ class MasterDataManagementTest extends MySqlTestBase {
         assertThat(ncService.taoNc(ncReq("FG-01", "SP001")).getSoHieu()).isNotBlank();
     }
 
+    @Test
+    void doiTuongNccVaMaHangNgungDung_khongTaoNcMoi() throws Exception {
+        TaoNcRequest.DoiTuongItem ncc = new TaoNcRequest.DoiTuongItem();
+        ncc.loaiDoiTuong = "NCC"; ncc.giaTri = "NCC01";
+        TaoNcRequest ok = ncReq("FG-01", null);
+        ok.doiTuong = List.of(ncc);
+        assertThat(ncService.taoNc(ok).getSoHieu()).isNotBlank();
+
+        api(post("/api/v1/masterdata/ncc/NCC01/ngung-dung"), "admin", null).andExpect(status().isOk());
+        TaoNcRequest bi = ncReq("REC-06", null);
+        bi.doiTuong = List.of(ncc);
+        assertThatThrownBy(() -> ncService.taoNc(bi)).isInstanceOf(BusinessException.class)
+                .hasMessageContaining("ngừng dùng");
+
+        TaoNcRequest.DoiTuongItem mh = new TaoNcRequest.DoiTuongItem();
+        mh.loaiDoiTuong = "MA_HANG"; mh.giaTri = "SP001";
+        api(post("/api/v1/masterdata/ma-hang/SP001/ngung-dung"), "admin", null).andExpect(status().isOk());
+        TaoNcRequest bi2 = ncReq("REC-06", null);
+        bi2.doiTuong = List.of(mh);
+        assertThatThrownBy(() -> ncService.taoNc(bi2)).isInstanceOf(BusinessException.class);
+    }
+
+    @Test
+    void suaConKhiChaNgungDung_khongDoiCha_vaFormGiuChaHienTai() throws Exception {
+        jdbc.update("UPDATE nhom_loi SET active = 0 WHERE nhom_loi_id = 'FG'");
+        // form sửa (gửi lại nhóm hiện tại, đang ngừng dùng) + đổi tên -> cha giữ nguyên
+        api(put("/api/v1/masterdata/ma-loi/FG-01"), "admin", "{\"ten\":\"Doi ten\",\"nhomLoiId\":\"FG\"}")
+                .andExpect(status().isOk());
+        assertThat(dem("SELECT COUNT(*) FROM ma_loi WHERE ma_loi_id='FG-01' AND nhom_loi_id='FG' "
+                + "AND ten_ma_loi='Doi ten'")).isEqualTo(1);
+        // trang render có cha ngừng dùng trong lựa chọn (kèm nhãn) để dropdown sửa giữ đúng cha
+        assertThat(html("/quan-tri/master-data/ma-loi")).contains("(ngừng dùng)");
+        // nhưng không chuyển sang một cha đang ngừng dùng khác
+        jdbc.update("UPDATE nhom_loi SET active = 0 WHERE nhom_loi_id = 'PRC'");
+        api(put("/api/v1/masterdata/ma-loi/REC-06"), "admin", "{\"nhomLoiId\":\"PRC\"}")
+                .andExpect(status().isUnprocessableEntity());
+        // nhà máy ngừng dùng: sửa mã hàng giữ nguyên nhà máy
+        jdbc.update("UPDATE nha_may SET active = 0 WHERE ma = 'MGP'");
+        api(put("/api/v1/masterdata/ma-hang/SP001"), "admin", "{\"ten\":\"Doi ten SP\",\"nhaMay\":\"MGP\"}")
+                .andExpect(status().isOk());
+        assertThat(dem("SELECT COUNT(*) FROM ma_hang WHERE ma='SP001' AND nha_may='MGP' AND ten='Doi ten SP'"))
+                .isEqualTo(1);
+    }
+
     // ---- Quyền: chặn ở server ----
 
     @Test

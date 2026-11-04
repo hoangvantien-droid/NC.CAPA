@@ -89,6 +89,11 @@ public class NcService {
         Severity mucPhieu = Severity.NHE;
         boolean foodSafety = false;
         TaoNcRequest.ChiTieuItem dongNangNhat = null;
+        if (req.doiTuong != null) {
+            for (TaoNcRequest.DoiTuongItem dt : req.doiTuong) {
+                defectCatalog.kiemTraDoiTuongDangDung(dt.loaiDoiTuong, dt.giaTri);
+            }
+        }
         for (TaoNcRequest.ChiTieuItem ct : req.chiTieu) {
             MaLoi ml = defectCatalog.get(ct.maLoiId);
             defectCatalog.kiemTraDangDungKhiTaoNc(req.nhaMay, ct.maHang, ml); // danh mục ngừng dùng không dùng cho NC mới

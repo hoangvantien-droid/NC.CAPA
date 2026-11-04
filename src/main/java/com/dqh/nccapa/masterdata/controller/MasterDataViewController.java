@@ -46,9 +46,9 @@ public class MasterDataViewController {
         model.addAttribute("cols", cot(loai));
         model.addAttribute("rows", service.danhSach(loai, q));
         model.addAttribute("nhaMayOpts", loai == MasterDataLoai.MA_HANG
-                ? service.luaChonDangDung(MasterDataLoai.NHA_MAY) : List.of());
+                ? service.luaChonTatCa(MasterDataLoai.NHA_MAY) : List.of());
         model.addAttribute("nhomLoiOpts", loai == MasterDataLoai.MA_LOI
-                ? service.luaChonDangDung(MasterDataLoai.NHOM_LOI) : List.of());
+                ? service.luaChonTatCa(MasterDataLoai.NHOM_LOI) : List.of());
         return "master-data";
     }
 
